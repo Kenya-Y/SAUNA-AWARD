@@ -259,6 +259,55 @@ function idbDel(key){
 }
 const keyFor = (t,s)=>`t${t}s${s}`;
 
+/* ---------------- 容量の最適化（DBの作り直し） ----------------
+   IndexedDBは削除・上書き後も内部に空き領域を抱えたまま
+   ファイルサイズを維持するため、使用容量が減らない。
+   全データをメモリに退避→DBファイルを削除→書き戻すことで
+   実際の使用容量を減らす */
+function closeDB(){
+  const p = dbPromise;
+  dbPromise = null;
+  if (!p) return Promise.resolve();
+  return p.then(db=>{ try{ db.close(); }catch(e){} }).catch(()=>{});
+}
+function deleteDB(){
+  return new Promise((resolve)=>{
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = ()=>resolve(true);
+    req.onerror = ()=>resolve(false);
+    req.onblocked = ()=>resolve(false);
+  });
+}
+async function rebuildDatabase(model){
+  await closeDB();
+  await deleteDB();
+  for (const t of [1,2,3]){
+    const arr = [];
+    for (let i=0;i<SLOTS;i++){
+      const e = model[t][i];
+      if (e && !isEmpty(e)){
+        await idbSet(keyFor(t,i+1), e);
+        arr.push(e);
+      } else {
+        arr.push(null);
+      }
+    }
+    cache[t] = arr;
+  }
+}
+async function snapshotAll(){
+  const model = {};
+  for (const t of [1,2,3]){
+    model[t] = cache[t] ? cache[t].slice() : await loadTier(t);
+    if (!cache[t]) cache[t] = model[t];
+  }
+  return model;
+}
+async function compactStorage(){
+  const model = await snapshotAll();
+  await rebuildDatabase(model);
+}
+
 /* 旧バージョン(title/location)のデータを新形式へ変換 */
 function normalize(e){
   if (!e) return null;
@@ -284,6 +333,50 @@ async function loadTier(t){
 
 if (navigator.storage && navigator.storage.persist){
   navigator.storage.persist().catch(()=>{});
+}
+
+/* ---------------- 容量の解放（DBの作り直し） ----------------
+   IndexedDBは削除・上書き後もディスク上に残骸が残り、使用容量が
+   減らないことがある。そこで削除系の操作後に、
+   「このアプリ専用DB(sauna-award)だけを削除 → 現在の登録内容だけを書き戻す」
+   ことで実際の容量を登録内容ぶんまで戻す。
+   注意: indexedDB.deleteDatabase("sauna-award") は当アプリが自分で
+   作成したデータベースのみを削除するAPIであり、iPhone内の他の
+   データ・写真・ファイルには一切アクセスしない。 */
+let rebuilding = false;
+async function rebuildDatabase(){
+  if (rebuilding) return;
+  rebuilding = true;
+  try{
+    /* 1) 現在の登録内容をメモリへ退避 */
+    const all = {};
+    let hasAny = false;
+    for (const T of TIERS){
+      const t = T.id;
+      all[t] = cache[t] || await loadTier(t);
+      if (all[t].some(Boolean)) hasAny = true;
+    }
+    /* 2) 自前のDBだけを削除（接続を閉じてから） */
+    try{ const db = await openDB(); db.close(); }catch(e){}
+    dbPromise = null;
+    await new Promise((res)=>{
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = req.onerror = req.onblocked = ()=>res();
+    });
+    /* 3) 登録が1件でもあれば書き戻す（空なら空のまま＝ほぼ0MB） */
+    if (hasAny){
+      for (const T of TIERS){
+        const t = T.id;
+        for (let i=0;i<SLOTS;i++){
+          const e = all[t][i];
+          if (e && !isEmpty(e)) await idbSet(keyFor(t,i+1), e);
+        }
+      }
+    }
+    for (const T of TIERS) cache[T.id] = all[T.id];
+  } finally {
+    rebuilding = false;
+  }
 }
 
 /* ---------------- 画像処理 ---------------- */
@@ -512,13 +605,21 @@ async function restoreFromZip(file){
     }
   }
   if (!recognized) throw new Error("バックアップ形式のファイルが見つかりません");
-  /* 既存の設定はすべて上書き */
+  /* 既存の設定はすべて上書き。
+     容量が積み上がらないよう、このアプリ専用DBを一旦削除してから
+     zipの内容だけを書き込む（他サイト・iPhone本体のデータには触れない） */
+  try{ const db = await openDB(); db.close(); }catch(e){}
+  dbPromise = null;
+  await new Promise((res)=>{
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = req.onerror = req.onblocked = ()=>res();
+  });
   for (const t of [1,2,3]){
     const arr = [];
     for (let i=0;i<SLOTS;i++){
       const e = model[t][i];
       e.minis = e.minis.filter(Boolean).slice(0,3);
-      if (isEmpty(e)){ await idbDel(keyFor(t,i+1)); arr.push(null); }
+      if (isEmpty(e)){ arr.push(null); }
       else { await idbSet(keyFor(t,i+1), e); arr.push(e); }
     }
     cache[t] = arr;
@@ -655,7 +756,7 @@ async function confirmCrop(){
   setStatus(slot, "SAVING…");
   const next = readSlotInputs(slot);
   next.image = out;
-  await persistSlot(slot, next);
+  await persistSlot(slot, next, true);
   render();
 }
 
@@ -916,7 +1017,7 @@ function setStatus(slot, msg, isError){
   el.style.color = isError ? "#D97362" : "var(--gold)";
   if (msg==="SAVED ✓") setTimeout(()=>{ if(el.textContent==="SAVED ✓") el.textContent=""; },2000);
 }
-async function persistSlot(slot, next){
+async function persistSlot(slot, next, compact){
   const key = keyFor(activeTier, slot+1);
   const arr = cache[activeTier] || Array(SLOTS).fill(null);
   try{
@@ -926,6 +1027,8 @@ async function persistSlot(slot, next){
       await idbSet(key, next); arr[slot]=next;
     }
     cache[activeTier]=arr;
+    /* 画像の削除・差し替えを伴う操作では残骸を掃除して容量を戻す */
+    if (compact) await rebuildDatabase();
     setStatus(slot,"SAVED ✓");
     return true;
   }catch(e){
@@ -961,7 +1064,7 @@ document.addEventListener("click", async (ev)=>{
   const clearEl = ev.target.closest(".js-clear");
   if (clearEl){
     const slot = Number(clearEl.getAttribute("data-slot"));
-    await persistSlot(slot,{title:"",roman:"",address:"",url:"",image:"",minis:[]});
+    await persistSlot(slot,{title:"",roman:"",address:"",url:"",image:"",minis:[]}, true);
     render();
     return;
   }
@@ -985,7 +1088,7 @@ document.addEventListener("click", async (ev)=>{
     next.minis = (next.minis||[]).slice();
     next.minis[k] = null;
     next.minis = next.minis.filter(Boolean).slice(0,3);
-    await persistSlot(slot, next);
+    await persistSlot(slot, next, true);
     render();
     return;
   }
@@ -1010,7 +1113,7 @@ document.addEventListener("change", async (ev)=>{
         const dataUrl = await compressImage(file);
         const next = readSlotInputs(slot);
         next.image = dataUrl;
-        await persistSlot(slot,next);
+        await persistSlot(slot,next, true);
         render();
       }
     }catch(e){
@@ -1031,7 +1134,7 @@ document.addEventListener("change", async (ev)=>{
       next.minis = (next.minis||[]).slice();
       next.minis[k] = dataUrl;
       next.minis = next.minis.filter(Boolean).slice(0,3);
-      await persistSlot(slot, next);
+      await persistSlot(slot, next, true);
       render();
     }catch(e){
       setStatus(slot, e&&e.message?e.message:"ミニ写真の設定に失敗しました", true);

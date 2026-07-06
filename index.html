@@ -217,6 +217,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
+const APP_VER = "1.0";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -344,6 +345,39 @@ if (navigator.storage && navigator.storage.persist){
    作成したデータベースのみを削除するAPIであり、iPhone内の他の
    データ・写真・ファイルには一切アクセスしない。 */
 let rebuilding = false;
+
+/* このアプリ専用DB(sauna-award)のみを削除し、完了を確実に待つ */
+function deleteOwnDatabase(){
+  return new Promise((res)=>{
+    let done = false;
+    const finish = ()=>{ if(!done){ done=true; res(); } };
+    try{
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = finish;
+      req.onerror = finish;
+      /* 接続が残っていてブロックされた場合も、閉じ次第削除される */
+      req.onblocked = ()=>setTimeout(finish, 800);
+      setTimeout(finish, 4000); /* 保険 */
+    }catch(e){ finish(); }
+  });
+}
+
+/* アプリが実際に保持しているデータ量（バイト）を直接計算する。
+   OSへの問い合わせ(navigator.storage.estimate)は内部ファイルの
+   整理が終わるまで減少が反映されないため、表示にはこちらを使う */
+async function calcDataSize(){
+  let bytes = 0;
+  for (const T of TIERS){
+    const t = T.id;
+    const arr = cache[t] || await loadTier(t);
+    if (!cache[t]) cache[t] = arr;
+    for (const e of arr){
+      if (e) bytes += JSON.stringify(e).length;
+    }
+  }
+  return bytes;
+}
+
 async function rebuildDatabase(){
   if (rebuilding) return;
   rebuilding = true;
@@ -359,10 +393,7 @@ async function rebuildDatabase(){
     /* 2) 自前のDBだけを削除（接続を閉じてから） */
     try{ const db = await openDB(); db.close(); }catch(e){}
     dbPromise = null;
-    await new Promise((res)=>{
-      const req = indexedDB.deleteDatabase(DB_NAME);
-      req.onsuccess = req.onerror = req.onblocked = ()=>res();
-    });
+    await deleteOwnDatabase();
     /* 3) 登録が1件でもあれば書き戻す（空なら空のまま＝ほぼ0MB） */
     if (hasAny){
       for (const T of TIERS){
@@ -610,10 +641,7 @@ async function restoreFromZip(file){
      zipの内容だけを書き込む（他サイト・iPhone本体のデータには触れない） */
   try{ const db = await openDB(); db.close(); }catch(e){}
   dbPromise = null;
-  await new Promise((res)=>{
-    const req = indexedDB.deleteDatabase(DB_NAME);
-    req.onsuccess = req.onerror = req.onblocked = ()=>res();
-  });
+  await deleteOwnDatabase();
   for (const t of [1,2,3]){
     const arr = [];
     for (let i=0;i<SLOTS;i++){
@@ -842,6 +870,7 @@ function tiersHTML(isSettings){
       ${rows}
     </div>
     ${marquee(isSettings?"Settings − 画像と施設情報を設定 − 7個まで":"Select Your Tier − 1〜7まで表示", true)}
+    ${isSettings?`<p class="status" style="text-align:right;color:rgba(255,255,255,.35);padding:10px 18px calc(14px + env(safe-area-inset-bottom));margin:0;">ver ${APP_VER}</p>`:""}
   </div>`;
 }
 
@@ -1193,12 +1222,12 @@ function render(){
   else if (view==="settingsTiers") root.innerHTML = tiersHTML(true);
   else if (view==="tierView") root.innerHTML = tierViewHTML();
   else if (view==="settingsTier") root.innerHTML = settingsHTML();
-  /* 設定トップでは現在の使用容量を表示 */
-  if (view==="settingsTiers" && navigator.storage && navigator.storage.estimate){
-    navigator.storage.estimate().then((est)=>{
+  /* 設定トップでは現在の登録データ量を表示（実データを直接計算） */
+  if (view==="settingsTiers"){
+    calcDataSize().then((bytes)=>{
       const el = document.getElementById("usage");
-      if (el && est && est.usage!==undefined){
-        el.textContent = `現在の使用容量: 約 ${(est.usage/1048576).toFixed(1)} MB`;
+      if (el){
+        el.textContent = `登録データ容量: ${(bytes/1048576).toFixed(1)} MB`;
       }
     }).catch(()=>{});
   }

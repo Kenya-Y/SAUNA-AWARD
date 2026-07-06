@@ -139,6 +139,36 @@ body{
 .crop-zoom{width:100%;max-width:380px;margin-top:18px;accent-color:#D9C27A;}
 .crop-actions{display:flex;gap:12px;margin-top:18px;width:100%;max-width:380px;}
 
+/* --- ミニ写真（URL下を流れるフィルムストリップ） --- */
+.mini-strip{overflow:hidden;margin-top:22px;}
+.mini-track{display:inline-flex;animation:marquee 32s linear infinite;}
+.mini-track img{height:150px;width:auto;display:block;margin-right:6px;}
+@media (prefers-reduced-motion:reduce){.mini-track{animation:none;}}
+.mini-pick{
+  width:100%;aspect-ratio:4/3;background:var(--ink-soft);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  border:1px dashed rgba(255,255,255,.3);
+}
+.mini-pick img{width:100%;height:100%;object-fit:cover;display:block;}
+.mini-del{
+  font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.2em;font-size:10px;
+  color:var(--paper-dim);background:none;border:none;cursor:pointer;padding:6px 0 0;width:100%;
+}
+
+/* --- 確認ポップアップ --- */
+#modal{
+  position:fixed;inset:0;z-index:60;display:none;
+  background:rgba(5,4,3,.9);
+  align-items:center;justify-content:center;padding:28px;
+}
+#modal.open{display:flex;}
+.modal-box{
+  background:#181512;border:1px solid var(--line);
+  max-width:380px;width:100%;padding:26px 22px;text-align:center;
+}
+.modal-msg{font-family:'Noto Sans JP',sans-serif;font-size:14px;line-height:2;color:var(--paper);margin:0 0 20px;}
+.modal-actions{display:flex;gap:12px;}
+
 /* Address / URL ブロック（写真2枚目風） */
 .meta{padding:26px 22px 8px;}
 .meta .mlabel{
@@ -166,6 +196,7 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 <div id="banner"></div>
 <div id="root"></div>
 <div id="cropper"></div>
+<div id="modal"></div>
 
 <script>
 "use strict";
@@ -237,9 +268,10 @@ function normalize(e){
     address: e.address !== undefined ? e.address : (e.location || ""),
     url:     e.url     || "",
     image:   e.image   || "",
+    minis:   Array.isArray(e.minis) ? e.minis.filter(Boolean).slice(0,3) : [],
   };
 }
-function isEmpty(e){ return !e.title && !e.roman && !e.address && !e.url && !e.image; }
+function isEmpty(e){ return !e.title && !e.roman && !e.address && !e.url && !e.image && (!e.minis || e.minis.length===0); }
 
 async function loadTier(t){
   const arr = [];
@@ -326,73 +358,213 @@ function downloadBlob(name,blob){
 }
 const csvSafe = (s)=>(s||"").replace(/,/g,"，").replace(/[\r\n]/g," ");
 
-async function exportTier(t){
-  const arr = cache[t] || await loadTier(t);
-  /* def_tier{n}.csv: n,和名,ローマ字,Address,URL */
-  let csv = "";
-  for (let i=0;i<SLOTS;i++){
-    const e = arr[i] || {};
-    csv += `${i+1},${csvSafe(e.title)},${csvSafe(e.roman)},${csvSafe(e.address)},${(e.url||"").replace(/[\r\n]/g,"")}\n`;
+/* ---------------- 一括バックアップ / 復元（zip） ----------------
+   zip内容: def_tier{n}.csv（n,和名,ローマ字,Address,URL）
+            data_tier{n}_{m}.jpg（メイン画像）
+            mini_tier{n}_{m}_{k}.jpg（ミニ写真）
+   zipは無圧縮(store)で作成。復元はstore/deflate両対応。 */
+
+const CRC_T = (()=>{ const t=new Uint32Array(256);
+  for(let i=0;i<256;i++){ let c=i; for(let k=0;k<8;k++) c = (c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[i]=c; }
+  return t; })();
+function crc32(u8){ let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++) c = CRC_T[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0; }
+
+function buildZip(files){
+  const enc = new TextEncoder();
+  const chunks=[]; const central=[]; let offset=0;
+  const u16=(v)=>[v&255,(v>>>8)&255];
+  const u32=(v)=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  for (const f of files){
+    const name = enc.encode(f.name);
+    const crc = crc32(f.data), sz = f.data.length;
+    const lh = new Uint8Array([
+      ...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(crc),...u32(sz),...u32(sz),...u16(name.length),...u16(0)
+    ]);
+    chunks.push(lh,name,f.data);
+    central.push({name,crc,sz,offset});
+    offset += lh.length+name.length+sz;
   }
-  downloadBlob(`def_tier${t}.csv`, new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  let count = 0;
-  for (let i=0;i<SLOTS;i++){
-    const e = arr[i];
-    if (e && e.image){
-      count++;
-      const blob = dataURLtoBlob(e.image);
-      const ext = blob.type==="image/png" ? "png" : "jpg";
-      await new Promise(r=>setTimeout(r, 400));
-      downloadBlob(`data_tier${t}_${i+1}.${ext}`, blob);
-    }
+  const cdStart = offset; let cdSize = 0;
+  for (const c of central){
+    const ch = new Uint8Array([
+      ...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(c.crc),...u32(c.sz),...u32(c.sz),
+      ...u16(c.name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(c.offset)
+    ]);
+    chunks.push(ch,c.name); cdSize += ch.length+c.name.length;
   }
-  return count;
+  chunks.push(new Uint8Array([
+    ...u32(0x06054b50),...u16(0),...u16(0),
+    ...u16(central.length),...u16(central.length),
+    ...u32(cdSize),...u32(cdStart),...u16(0)
+  ]));
+  return new Blob(chunks,{type:"application/zip"});
 }
 
-async function importFiles(fileList){
-  const files = Array.from(fileList);
-  let touched = new Set();
-  for (const f of files){
+async function readZip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  const stop = Math.max(0, buf.byteLength-22-65536);
+  for (let i=buf.byteLength-22; i>=stop; i--){
+    if (dv.getUint32(i,true)===0x06054b50){ eocd=i; break; }
+  }
+  if (eocd<0) throw new Error("zip形式を認識できません");
+  const count = dv.getUint16(eocd+10,true);
+  let p = dv.getUint32(eocd+16,true);
+  const dec = new TextDecoder();
+  const out = [];
+  for (let n=0;n<count;n++){
+    if (dv.getUint32(p,true)!==0x02014b50) break;
+    const method = dv.getUint16(p+10,true);
+    const csize = dv.getUint32(p+20,true);
+    const nameLen = dv.getUint16(p+28,true), extraLen = dv.getUint16(p+30,true), cmtLen = dv.getUint16(p+32,true);
+    const lho = dv.getUint32(p+42,true);
+    const rawName = dec.decode(u8.subarray(p+46, p+46+nameLen));
+    p += 46+nameLen+extraLen+cmtLen;
+    if (rawName.endsWith("/")) continue;
+    const lnl = dv.getUint16(lho+26,true), lel = dv.getUint16(lho+28,true);
+    const start = lho+30+lnl+lel;
+    let data = u8.slice(start, start+csize);
+    if (method===8){
+      const ab = await new Response(
+        new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))
+      ).arrayBuffer();
+      data = new Uint8Array(ab);
+    } else if (method!==0){ continue; }
+    out.push({ name: rawName.split("/").pop(), data });
+  }
+  return out;
+}
+
+function dataURLtoBytes(d){ return new Uint8Array(atob(d.slice(d.indexOf(",")+1)).split("").map(c=>c.charCodeAt(0))); }
+function bytesToDataURL(bytes, mime){
+  let bin=""; const CH=0x8000;
+  for (let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+CH));
+  return `data:${mime};base64,`+btoa(bin);
+}
+const extMime = (name)=>/\.png$/i.test(name) ? "image/png" : "image/jpeg";
+
+async function buildBackup(){
+  const files = [];
+  for (const T of TIERS){
+    const t = T.id;
+    const arr = cache[t] || await loadTier(t);
+    if (!cache[t]) cache[t]=arr;
+    let csv = "";
+    for (let i=0;i<SLOTS;i++){
+      const e = arr[i] || {};
+      csv += `${i+1},${csvSafe(e.title)},${csvSafe(e.roman)},${csvSafe(e.address)},${(e.url||"").replace(/[\r\n]/g,"")}\n`;
+    }
+    files.push({ name:`def_tier${t}.csv`, data:new TextEncoder().encode(csv) });
+    for (let i=0;i<SLOTS;i++){
+      const e = arr[i];
+      if (!e) continue;
+      if (e.image) files.push({ name:`data_tier${t}_${i+1}.jpg`, data:dataURLtoBytes(e.image) });
+      (e.minis||[]).forEach((m,k)=>{
+        if (m) files.push({ name:`mini_tier${t}_${i+1}_${k+1}.jpg`, data:dataURLtoBytes(m) });
+      });
+    }
+  }
+  const stamp = new Date().toISOString().slice(0,10).replace(/-/g,"");
+  downloadBlob(`sauna_award_backup_${stamp}.zip`, buildZip(files));
+}
+
+async function restoreFromZip(file){
+  const entries = await readZip(await file.arrayBuffer());
+  if (!entries.length) throw new Error("zip内にファイルがありません");
+  /* 復元は全上書き: まず空のモデルを作り、zipの内容を流し込む */
+  const blank = ()=>({title:"",roman:"",address:"",url:"",image:"",minis:[]});
+  const model = {1:[],2:[],3:[]};
+  for (const t of [1,2,3]) for (let i=0;i<SLOTS;i++) model[t].push(blank());
+  let recognized = 0;
+  for (const f of entries){
     const csvMatch = f.name.match(/^def_tier([123])\.csv$/i);
-    const imgMatch = f.name.match(/^data_tier([123])_([1-7])\./i);
+    const imgMatch = f.name.match(/^data_tier([123])_([1-7])\.(jpg|jpeg|png)$/i);
+    const miniMatch = f.name.match(/^mini_tier([123])_([1-7])_([123])\.(jpg|jpeg|png)$/i);
     if (csvMatch){
+      recognized++;
       const t = Number(csvMatch[1]);
-      const text = await f.text();
-      const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
-      const arr = cache[t] || await loadTier(t);
+      const lines = new TextDecoder().decode(f.data).split(/\r?\n/).filter(l=>l.trim()!=="");
       for (const line of lines){
         const parts = line.split(",");
         const n = Number(parts[0]);
         if (!(n>=1 && n<=SLOTS)) continue;
-        const prev = arr[n-1] || {};
-        let next;
+        const e = model[t][n-1];
         if (parts.length <= 3){
-          /* 旧形式: n,施設名,所在地 */
-          next = normalize({ title:(parts[1]||"").trim(), location:(parts[2]||"").trim(), image:prev.image||"" });
+          e.title = (parts[1]||"").trim().slice(0,MAX_TITLE);
+          e.address = (parts[2]||"").trim();
         } else {
-          next = {
-            title:(parts[1]||"").trim().slice(0,MAX_TITLE),
-            roman:(parts[2]||"").trim(),
-            address:(parts[3]||"").trim(),
-            url:parts.slice(4).join(",").trim(),
-            image:prev.image||"",
-          };
+          e.title = (parts[1]||"").trim().slice(0,MAX_TITLE);
+          e.roman = (parts[2]||"").trim();
+          e.address = (parts[3]||"").trim();
+          e.url = parts.slice(4).join(",").trim();
         }
-        if (isEmpty(next)){ await idbDel(keyFor(t,n)); arr[n-1]=null; }
-        else { await idbSet(keyFor(t,n), next); arr[n-1]=next; }
       }
-      cache[t]=arr; touched.add(t);
     } else if (imgMatch){
-      const t = Number(imgMatch[1]), n = Number(imgMatch[2]);
-      const dataUrl = await compressImage(f);
-      const arr = cache[t] || await loadTier(t);
-      const prev = arr[n-1] || {};
-      const next = normalize({...prev, image:dataUrl});
-      await idbSet(keyFor(t,n), next);
-      arr[n-1]=next; cache[t]=arr; touched.add(t);
+      recognized++;
+      model[Number(imgMatch[1])][Number(imgMatch[2])-1].image = bytesToDataURL(f.data, extMime(f.name));
+    } else if (miniMatch){
+      recognized++;
+      model[Number(miniMatch[1])][Number(miniMatch[2])-1].minis[Number(miniMatch[3])-1] = bytesToDataURL(f.data, extMime(f.name));
     }
   }
-  return touched.size;
+  if (!recognized) throw new Error("バックアップ形式のファイルが見つかりません");
+  /* 既存の設定はすべて上書き */
+  for (const t of [1,2,3]){
+    const arr = [];
+    for (let i=0;i<SLOTS;i++){
+      const e = model[t][i];
+      e.minis = e.minis.filter(Boolean).slice(0,3);
+      if (isEmpty(e)){ await idbDel(keyFor(t,i+1)); arr.push(null); }
+      else { await idbSet(keyFor(t,i+1), e); arr.push(e); }
+    }
+    cache[t] = arr;
+  }
+}
+
+/* ミニ写真用: 小さめに圧縮 */
+async function compressMini(file){
+  const raw = await fileToDataURL(file);
+  let src;
+  try{ src = await decodeImage(file,raw); }
+  catch(e){
+    if (raw.length < 500000) return raw;
+    throw e;
+  }
+  const MAX_DIM = 800;
+  const w0 = src.width||src.naturalWidth, h0 = src.height||src.naturalHeight;
+  const sc = Math.min(1, MAX_DIM/Math.max(w0,h0));
+  const w = Math.max(1,Math.round(w0*sc)), h = Math.max(1,Math.round(h0*sc));
+  const c = document.createElement("canvas");
+  c.width=w; c.height=h;
+  c.getContext("2d").drawImage(src,0,0,w,h);
+  for (const q of [0.8,0.65,0.5,0.35]){
+    const out = c.toDataURL("image/jpeg",q);
+    if (out.length < 500000) return out;
+  }
+  return c.toDataURL("image/jpeg",0.3);
+}
+
+/* 確認ポップアップ: okLabel/cancelLabelのボタンで真偽を返す */
+function showConfirm(message, okLabel, cancelLabel){
+  return new Promise((resolve)=>{
+    const modal = document.getElementById("modal");
+    modal.innerHTML = `
+      <div class="modal-box">
+        <p class="modal-msg">${message}</p>
+        <div class="modal-actions">
+          <button class="tool-btn" id="modal-cancel" style="flex:1;">${cancelLabel}</button>
+          <button class="save-btn" id="modal-ok" style="flex:1;letter-spacing:.15em;">${okLabel}</button>
+        </div>
+      </div>`;
+    modal.classList.add("open");
+    const close = (v)=>{ modal.classList.remove("open"); modal.innerHTML=""; resolve(v); };
+    document.getElementById("modal-ok").addEventListener("click", ()=>close(true));
+    document.getElementById("modal-cancel").addEventListener("click", ()=>close(false));
+  });
 }
 
 /* ---------------- 画像切り抜き（ユーザーが範囲を選択） ----------------
@@ -555,7 +727,15 @@ function tiersHTML(isSettings){
       <button class="back" data-go="home">← Top</button>
       <p class="eyebrow" style="margin-top:18px;">${isSettings?"Settings":"Archive"}</p>
       <h2 class="romaji" style="font-size:clamp(32px,9vw,54px);margin:6px 0 0;">SAUNA AWARD</h2>
-      ${isSettings?`<p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;">［設定］各Tierに 7施設まで登録できます</p>`:""}
+      ${isSettings?`<p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;">［設定］各Tierに 7施設まで登録できます</p>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+        <button class="tool-btn js-backup">バックアップ（zip保存）</button>
+        <label class="tool-btn" style="display:inline-block;">
+          復元（zip選択）<input class="file-input js-restore" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+        </label>
+      </div>
+      <p class="status js-bakmsg" style="color:var(--gold);margin-top:10px;display:block;"></p>
+      <p class="status" id="usage" style="color:rgba(255,255,255,.4);display:block;margin-top:4px;"></p>`:""}
     </header>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 24px;gap:18px;max-width:480px;width:100%;margin:0 auto;">
       ${rows}
@@ -592,10 +772,20 @@ function entryHTML(e, i, t){
       ${e.address?`<p class="mlabel">Address</p><p class="mval">${esc(e.address)}</p>`:""}
       ${href?`<p class="mlabel">URL</p><a class="mval" href="${esc(href)}" target="_blank" rel="noopener">${esc(e.url)}</a>`:""}
     </div>`;
+  /* ミニ写真: 登録枚数が少なくても同じ画像を繰り返してループさせる */
+  let miniStrip = "";
+  const minis = (e.minis||[]).filter(Boolean);
+  if (minis.length){
+    let seq = [];
+    while (seq.length < 6) seq = seq.concat(minis);
+    const group = seq.map(m=>`<img src="${m}" alt="">`).join("");
+    miniStrip = `<div class="mini-strip" aria-hidden="true"><div class="mini-track">${group}${group}</div></div>`;
+  }
   return `
   <article style="padding:34px 0 30px;border-bottom:1px solid var(--line);">
     ${hero}
     ${meta}
+    ${miniStrip}
   </article>`;
 }
 
@@ -659,6 +849,22 @@ function settingsHTML(){
         <p class="flabel" style="margin:0 0 2px;">URL</p>
         <input class="tinput js-url" data-slot="${i}" inputmode="url" placeholder="例：https://www.shiretoko.co.jp/" value="${v("url")}">
       </div>
+      <div style="margin-top:18px;">
+        <p class="flabel" style="margin:0 0 8px;">ミニ写真（最大3枚・URLの下を流れます）</p>
+        <div style="display:flex;gap:10px;">
+          ${[0,1,2].map(k=>{
+            const m = e && e.minis && e.minis[k];
+            return `
+            <div style="flex:1;min-width:0;">
+              <label class="file-label">
+                <input class="file-input js-mini" type="file" accept="image/*" data-slot="${i}" data-mini="${k}" aria-label="No.${i+1} のミニ写真${k+1}">
+                <span class="mini-pick">${m?`<img src="${m}" alt="">`:`<span class="eyebrow" style="font-size:14px;">＋</span>`}</span>
+              </label>
+              ${m?`<button class="mini-del js-minidel" data-slot="${i}" data-mini="${k}">削除</button>`:""}
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:16px;margin-top:20px;">
         <button class="save-btn js-save" data-slot="${i}">保存</button>
         <span class="status js-status" data-slot="${i}" style="color:var(--gold);" aria-live="polite"></span>
@@ -673,18 +879,8 @@ function settingsHTML(){
       <p class="eyebrow" style="margin-top:14px;">Settings</p>
       <h2 class="romaji" style="font-size:clamp(30px,8.5vw,52px);margin:4px 0 0;">TIER <span class="num-gold">${t.roman}</span> SETTING</h2>
       <p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;line-height:1.9;">
-        画像は写真アプリから選択。入力後は「保存」を押してください。
-      </p>
-      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
-        <button class="tool-btn js-export">このTierをエクスポート</button>
-        <label class="tool-btn" style="display:inline-block;">
-          インポート<input class="file-input js-import" type="file" multiple accept=".csv,text/csv,image/*">
-        </label>
-      </div>
-      <p class="status js-toolmsg" style="color:var(--gold);margin-top:10px;display:block;"></p>
-      <p style="font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.1em;margin-top:8px;line-height:1.8;">
-        エクスポートで def_tier${activeTier}.csv（n,和名,ローマ字,Address,URL）と data_tier${activeTier}_n(画像) がダウンロードされます。<br>
-        ファイルアプリで「sauna_award/data/tier${activeTier}」へ移動して保管してください。
+        画像は写真アプリから選択。入力後は「保存」を押してください。<br>
+        バックアップ・復元は設定トップ（Tier選択画面）から行えます。
       </p>
     </header>
     ${marquee(`Settings − Tier ${t.roman} − 7個まで設定`, true)}
@@ -710,6 +906,7 @@ function readSlotInputs(slot){
     address: g("js-address").trim(),
     url:     g("js-url").trim(),
     image:   (prev&&prev.image)||"",
+    minis:   (prev&&prev.minis)?prev.minis.slice():[],
   };
 }
 function setStatus(slot, msg, isError){
@@ -764,20 +961,32 @@ document.addEventListener("click", async (ev)=>{
   const clearEl = ev.target.closest(".js-clear");
   if (clearEl){
     const slot = Number(clearEl.getAttribute("data-slot"));
-    await persistSlot(slot,{title:"",roman:"",address:"",url:"",image:""});
+    await persistSlot(slot,{title:"",roman:"",address:"",url:"",image:"",minis:[]});
     render();
     return;
   }
-  const expEl = ev.target.closest(".js-export");
-  if (expEl){
-    const msg = root.querySelector(".js-toolmsg");
-    msg.textContent = "エクスポート中…";
+  const bakEl = ev.target.closest(".js-backup");
+  if (bakEl){
+    const msg = root.querySelector(".js-bakmsg");
+    msg.textContent = "バックアップ作成中…";
     try{
-      const n = await exportTier(activeTier);
-      msg.textContent = `def_tier${activeTier}.csv と画像${n}枚をダウンロードしました`;
+      await buildBackup();
+      msg.textContent = "バックアップ(zip)をダウンロードしました";
     }catch(e){
-      msg.textContent = "エクスポートに失敗しました";
+      msg.textContent = "バックアップに失敗しました";
     }
+    return;
+  }
+  const mdelEl = ev.target.closest(".js-minidel");
+  if (mdelEl){
+    const slot = Number(mdelEl.getAttribute("data-slot"));
+    const k = Number(mdelEl.getAttribute("data-mini"));
+    const next = readSlotInputs(slot);
+    next.minis = (next.minis||[]).slice();
+    next.minis[k] = null;
+    next.minis = next.minis.filter(Boolean).slice(0,3);
+    await persistSlot(slot, next);
+    render();
     return;
   }
 });
@@ -809,18 +1018,45 @@ document.addEventListener("change", async (ev)=>{
     }
     return;
   }
-  if (ev.target.classList.contains("js-import")){
-    const files = ev.target.files;
-    const msg = root.querySelector(".js-toolmsg");
-    msg.textContent = "インポート中…";
+  if (ev.target.classList.contains("js-mini")){
+    const slot = Number(ev.target.getAttribute("data-slot"));
+    const k = Number(ev.target.getAttribute("data-mini"));
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    setStatus(slot,"SAVING…");
     try{
-      const n = await importFiles(files);
-      msg.textContent = n>0 ? "インポートが完了しました" : "対象ファイル（def_tierN.csv / data_tierN_n）が見つかりません";
+      const dataUrl = await compressMini(file);
+      const next = readSlotInputs(slot);
+      next.minis = (next.minis||[]).slice();
+      next.minis[k] = dataUrl;
+      next.minis = next.minis.filter(Boolean).slice(0,3);
+      await persistSlot(slot, next);
       render();
     }catch(e){
-      msg.textContent = "インポートに失敗しました";
+      setStatus(slot, e&&e.message?e.message:"ミニ写真の設定に失敗しました", true);
     }
+    return;
+  }
+  if (ev.target.classList.contains("js-restore")){
+    const file = ev.target.files && ev.target.files[0];
     ev.target.value = "";
+    if (!file) return;
+    const msg = root.querySelector(".js-bakmsg");
+    /* 復元前に確認ポップアップを表示（現在の設定はすべて上書き） */
+    const ok = await showConfirm(
+      `復元ファイルは問題ないですか？<br><span style="font-size:12px;color:var(--paper-dim);">${esc(file.name)}<br>現在の登録内容はすべて上書きされます</span>`,
+      "問題なし","戻る"
+    );
+    if (!ok){ if(msg) msg.textContent = "復元をキャンセルしました"; return; }
+    if (msg) msg.textContent = "復元中…";
+    try{
+      await restoreFromZip(file);
+      if (msg) msg.textContent = "復元が完了しました";
+      render();
+    }catch(e){
+      if (msg) msg.textContent = e&&e.message?e.message:"復元に失敗しました";
+    }
     return;
   }
 });
@@ -854,6 +1090,15 @@ function render(){
   else if (view==="settingsTiers") root.innerHTML = tiersHTML(true);
   else if (view==="tierView") root.innerHTML = tierViewHTML();
   else if (view==="settingsTier") root.innerHTML = settingsHTML();
+  /* 設定トップでは現在の使用容量を表示 */
+  if (view==="settingsTiers" && navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then((est)=>{
+      const el = document.getElementById("usage");
+      if (el && est && est.usage!==undefined){
+        el.textContent = `現在の使用容量: 約 ${(est.usage/1048576).toFixed(1)} MB`;
+      }
+    }).catch(()=>{});
+  }
 }
 
 render();

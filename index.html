@@ -217,7 +217,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.0";
+const APP_VER = "1.1";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -825,7 +825,7 @@ function go(v,t){
 function homeHTML(){
   return `
   <div class="fade" style="min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;">
-    ${marquee("Sauna Award − My Personal Sauna Ranking − ととのえの記録", true)}
+    ${marquee("Sauna Award − My Personal Sauna Ranking − ととのいの記録", true)}
     <div style="padding:0 28px;text-align:center;">
       <p class="eyebrow" style="margin-bottom:28px;">Personal Archive</p>
       <h1 class="romaji" style="font-size:clamp(52px,15vw,110px);margin:0;">SAUNA<br>AWARD</h1>
@@ -937,7 +937,7 @@ function tierViewHTML(){
         <p class="mq-font" style="font-size:12px;color:var(--paper-dim);margin:0;">${filled} / ${SLOTS}</p>
       </div>
     </header>
-    ${marquee(`Sauna of My Life − Tier ${t.roman} − Sauna Award`, true)}
+    ${marquee(`ととのいの記録 − Tier ${t.roman} − Sauna Award`, true)}
     <main style="max-width:620px;margin:0 auto;padding:0 0 80px;">${items}</main>
   </div>`;
 }

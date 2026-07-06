@@ -106,7 +106,7 @@ body{
   background:linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,.28) 78%,rgba(0,0,0,.5) 100%);
   pointer-events:none;
 }
-.hero-inner{position:relative;z-index:1;padding:0 22px 18px;}
+.hero-inner{position:relative;z-index:1;padding:0 22px 28px;}
 .hero-num{
   position:absolute;z-index:1;top:16%;left:22px;
   font-size:clamp(64px,17vw,110px);
@@ -119,14 +119,25 @@ body{
   font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:15px;
   color:var(--gold);text-decoration:underline;text-underline-offset:5px;
 }
-.hero-addrbar{
-  position:relative;z-index:1;margin-top:20px;
-  background:rgba(20,18,16,.55);backdrop-filter:blur(2px);
-  padding:14px 22px 16px;
-  display:flex;gap:14px;align-items:baseline;
+/* --- 画像切り抜きモーダル --- */
+#cropper{
+  position:fixed;inset:0;z-index:50;display:none;
+  background:rgba(5,4,3,.97);
+  flex-direction:column;align-items:center;justify-content:center;padding:20px;
 }
-.hero-addrbar .k{font-family:'Jost',sans-serif;font-weight:300;font-size:13px;color:rgba(255,255,255,.5);}
-.hero-addrbar .v{font-family:'Jost','Noto Sans JP',sans-serif;font-weight:300;font-size:13px;color:rgba(255,255,255,.72);letter-spacing:.04em;line-height:1.7;}
+#cropper.open{display:flex;}
+.crop-note{font-family:'Noto Sans JP',sans-serif;font-size:12px;color:var(--paper-dim);letter-spacing:.1em;margin:0 0 14px;text-align:center;line-height:1.8;}
+.crop-frame{
+  position:relative;overflow:hidden;background:#000;
+  border:1px solid rgba(255,255,255,.4);
+  touch-action:none;cursor:grab;
+}
+.crop-frame img{
+  position:absolute;top:0;left:0;max-width:none;
+  user-select:none;-webkit-user-drag:none;pointer-events:none;
+}
+.crop-zoom{width:100%;max-width:380px;margin-top:18px;accent-color:#D9C27A;}
+.crop-actions{display:flex;gap:12px;margin-top:18px;width:100%;max-width:380px;}
 
 /* Address / URL ブロック（写真2枚目風） */
 .meta{padding:26px 22px 8px;}
@@ -145,7 +156,7 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .pick-frame{
-  width:100%;aspect-ratio:4/3;background:var(--ink-soft);overflow:hidden;
+  width:100%;aspect-ratio:10/13;background:var(--ink-soft);overflow:hidden;
   display:flex;align-items:center;justify-content:center;
 }
 img.entry{width:100%;height:100%;object-fit:cover;display:block;}
@@ -154,6 +165,7 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 <body>
 <div id="banner"></div>
 <div id="root"></div>
+<div id="cropper"></div>
 
 <script>
 "use strict";
@@ -383,6 +395,98 @@ async function importFiles(fileList){
   return touched.size;
 }
 
+/* ---------------- 画像切り抜き（ユーザーが範囲を選択） ----------------
+   表示枠(幅:高さ=10:13)に合わせた切り取り枠を表示し、
+   ドラッグで位置・スライダーで拡大率を選んでから確定する */
+const CROP_AR = 13/10;
+const OUT_W = 1000, OUT_H = 1300;
+const cropperEl = document.getElementById("cropper");
+let crop = null; // {img, slot, fw, fh, s, min, max, tx, ty, drag}
+
+function clampCrop(){
+  const iw = crop.img.naturalWidth*crop.s, ih = crop.img.naturalHeight*crop.s;
+  crop.tx = Math.min(0, Math.max(crop.fw - iw, crop.tx));
+  crop.ty = Math.min(0, Math.max(crop.fh - ih, crop.ty));
+}
+function applyCrop(){
+  clampCrop();
+  const im = document.getElementById("crop-img");
+  im.style.width = (crop.img.naturalWidth*crop.s)+"px";
+  im.style.transform = `translate(${crop.tx}px,${crop.ty}px)`;
+}
+function openCropper(img, slot){
+  const fw = Math.min(Math.round(window.innerWidth*0.86), 360);
+  const fh = Math.round(fw*CROP_AR);
+  const min = Math.max(fw/img.naturalWidth, fh/img.naturalHeight);
+  crop = { img, slot, fw, fh, s:min, min, max:min*4,
+           tx:(fw-img.naturalWidth*min)/2, ty:(fh-img.naturalHeight*min)/2, drag:null };
+  cropperEl.innerHTML = `
+    <p class="crop-note">切り取る範囲を選択してください<br>ドラッグで移動 ／ スライダーで拡大</p>
+    <div class="crop-frame" id="crop-frame" style="width:${fw}px;height:${fh}px;">
+      <img id="crop-img" alt="">
+    </div>
+    <input class="crop-zoom" id="crop-zoom" type="range" min="0" max="100" value="0" aria-label="拡大率">
+    <div class="crop-actions">
+      <button class="tool-btn" id="crop-cancel" style="flex:1;">キャンセル</button>
+      <button class="save-btn" id="crop-ok" style="flex:1;letter-spacing:.15em;">この範囲で設定</button>
+    </div>`;
+  document.getElementById("crop-img").src = img.src;
+  cropperEl.classList.add("open");
+  applyCrop();
+  const frame = document.getElementById("crop-frame");
+  frame.addEventListener("pointerdown",(e)=>{
+    e.preventDefault();
+    frame.setPointerCapture(e.pointerId);
+    crop.drag = { x:e.clientX, y:e.clientY, tx:crop.tx, ty:crop.ty };
+  });
+  frame.addEventListener("pointermove",(e)=>{
+    if (!crop || !crop.drag) return;
+    crop.tx = crop.drag.tx + (e.clientX - crop.drag.x);
+    crop.ty = crop.drag.ty + (e.clientY - crop.drag.y);
+    applyCrop();
+  });
+  const endDrag = ()=>{ if (crop) crop.drag = null; };
+  frame.addEventListener("pointerup", endDrag);
+  frame.addEventListener("pointercancel", endDrag);
+  document.getElementById("crop-zoom").addEventListener("input",(e)=>{
+    const t = Number(e.target.value)/100;
+    const s2 = crop.min + (crop.max - crop.min)*t;
+    /* 枠の中心を基準に拡大縮小 */
+    const cx = crop.fw/2, cy = crop.fh/2;
+    const px = (cx - crop.tx)/crop.s, py = (cy - crop.ty)/crop.s;
+    crop.s = s2;
+    crop.tx = cx - px*s2;
+    crop.ty = cy - py*s2;
+    applyCrop();
+  });
+  document.getElementById("crop-cancel").addEventListener("click", closeCropper);
+  document.getElementById("crop-ok").addEventListener("click", confirmCrop);
+}
+function closeCropper(){
+  cropperEl.classList.remove("open");
+  cropperEl.innerHTML = "";
+  crop = null;
+}
+async function confirmCrop(){
+  if (!crop) return;
+  const { img, slot, s, tx, ty, fw, fh } = crop;
+  const sx = -tx/s, sy = -ty/s, sw = fw/s, sh = fh/s;
+  const c = document.createElement("canvas");
+  c.width = OUT_W; c.height = OUT_H;
+  c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, OUT_W, OUT_H);
+  let out = c.toDataURL("image/jpeg", 0.85);
+  for (const q of [0.72, 0.6, 0.45, 0.32]){
+    if (out.length < MAX_DATAURL) break;
+    out = c.toDataURL("image/jpeg", q);
+  }
+  closeCropper();
+  setStatus(slot, "SAVING…");
+  const next = readSlotInputs(slot);
+  next.image = out;
+  await persistSlot(slot, next);
+  render();
+}
+
 /* ---------------- state / render ---------------- */
 const cache = {};
 let view = "home";
@@ -482,11 +586,6 @@ function entryHTML(e, i, t){
         ${e.title?`<p class="waname">${esc(e.title)}</p>`:""}
         ${href?`<a class="detail-link" href="${esc(href)}" target="_blank" rel="noopener">⇗ 施設詳細へ</a>`:""}
       </div>
-      ${e.address?`
-      <div class="hero-addrbar">
-        <span class="k">A</span>
-        <span class="v">${esc(e.address)}</span>
-      </div>`:""}
     </div>`;
   const meta = `
     <div class="meta">
@@ -495,9 +594,6 @@ function entryHTML(e, i, t){
     </div>`;
   return `
   <article style="padding:34px 0 30px;border-bottom:1px solid var(--line);">
-    <div style="padding:0 22px 12px;">
-      <span class="mq-font" style="font-size:13px;color:rgba(255,255,255,.5);">Sauna of My Life − ${i+1} −${e.address?` @${esc(e.address)}`:""}</span>
-    </div>
     ${hero}
     ${meta}
   </article>`;
@@ -692,13 +788,22 @@ document.addEventListener("change", async (ev)=>{
     const file = ev.target.files && ev.target.files[0];
     ev.target.value = "";
     if (!file) return;
-    setStatus(slot,"SAVING…");
     try{
-      const dataUrl = await compressImage(file);
-      const next = readSlotInputs(slot);
-      next.image = dataUrl;
-      await persistSlot(slot,next);
-      render();
+      const raw = await fileToDataURL(file);
+      let imgEl = null;
+      try{ imgEl = await decodeViaImg(raw); }catch(e){}
+      if (imgEl){
+        /* 切り取り画面を表示し、ユーザーが範囲を選択してから設定 */
+        openCropper(imgEl, slot);
+      } else {
+        /* 表示できない形式は従来の自動変換で保存 */
+        setStatus(slot,"SAVING…");
+        const dataUrl = await compressImage(file);
+        const next = readSlotInputs(slot);
+        next.image = dataUrl;
+        await persistSlot(slot,next);
+        render();
+      }
     }catch(e){
       setStatus(slot, e&&e.message?e.message:"画像の設定に失敗しました", true);
     }

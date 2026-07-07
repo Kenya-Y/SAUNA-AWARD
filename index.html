@@ -90,11 +90,28 @@ body{
 }
 .btn:active{background:var(--paper);color:var(--ink);}
 
-/* ボタンの設定: ブラック / ホワイト */
-body.btn-black .btn{background:#000;border-color:rgba(255,255,255,.4);}
+/* ボタンの設定: ブラック / ホワイト（背景を透かした すりガラス調）
+   .btn（START/設定/TIER）に加え .tool-btn（各種設定ボタン）にも適用 */
+body.btn-black .btn,
+body.btn-black .tool-btn{
+  background:rgba(0,0,0,.45);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border-color:rgba(255,255,255,.4);
+}
 body.btn-black .btn:active{background:var(--paper);color:var(--ink);}
-body.btn-white .btn{background:var(--paper);color:var(--ink);border-color:var(--paper);}
-body.btn-white .btn:active{background:transparent;color:var(--paper);border-color:rgba(255,255,255,.45);}
+body.btn-white .btn,
+body.btn-white .tool-btn{
+  background:rgba(255,255,255,.6);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border-color:rgba(255,255,255,.75);
+  color:var(--ink);
+}
+/* ホワイト時はボタン内のすべての文字を黒に（金のTier数字はグラデーションのまま） */
+body.btn-white .btn *,
+body.btn-white .tool-btn *{color:var(--ink) !important;}
+body.btn-white .btn:active{background:rgba(0,0,0,.4);color:var(--paper);}
 .back{
   font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.3em;font-size:11px;
   color:var(--paper-dim);background:none;border:none;cursor:pointer;padding:8px 0;
@@ -256,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.6";
+const APP_VER = "1.7";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -784,8 +801,8 @@ function showBtnMenu(){
     <div class="modal-box">
       <p class="modal-msg">ボタンの設定<br><span style="font-size:12px;color:var(--paper-dim);">ボタンの背景色を変更します</span></p>
       <button class="tool-btn js-btnset" data-val="default" style="width:100%;margin-bottom:10px;">デフォルト${mark("default")}</button>
-      <button class="tool-btn js-btnset" data-val="black" style="width:100%;margin-bottom:10px;background:#000;">ブラック${mark("black")}</button>
-      <button class="tool-btn js-btnset" data-val="white" style="width:100%;margin-bottom:14px;background:var(--paper);color:var(--ink);">ホワイト${mark("white")}</button>
+      <button class="tool-btn js-btnset" data-val="black" style="width:100%;margin-bottom:10px;background:rgba(0,0,0,.55);">ブラック${mark("black")}</button>
+      <button class="tool-btn js-btnset" data-val="white" style="width:100%;margin-bottom:14px;background:rgba(255,255,255,.75);color:var(--ink);">ホワイト${mark("white")}</button>
       <button class="back js-bgcancel" style="width:100%;">戻る</button>
     </div>`;
   modal.classList.add("open");
@@ -1083,7 +1100,6 @@ function settingsHTML(){
       <div style="margin-top:18px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（和名）</p>
         <input class="tinput js-title" data-slot="${i}" maxlength="${MAX_TITLE}" placeholder="例：北こぶし知床 ホテル&リゾート" value="${v("title")}">
-        <div style="text-align:right;margin-top:4px;"><span class="status js-count" data-slot="${i}" style="color:var(--paper-dim);">${(e&&e.title?e.title.length:0)} / ${MAX_TITLE}</span></div>
       </div>
       <div style="margin-top:6px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（ローマ字）</p>
@@ -1396,15 +1412,6 @@ document.addEventListener("focusout",(ev)=>{
     }
   }
 });
-/* 文字数カウンター */
-document.addEventListener("input",(ev)=>{
-  if (ev.target.classList && ev.target.classList.contains("js-title")){
-    const slot = ev.target.getAttribute("data-slot");
-    const c = root.querySelector(`.js-count[data-slot="${slot}"]`);
-    if (c) c.textContent = `${ev.target.value.length} / ${MAX_TITLE}`;
-  }
-});
-
 function render(){
   showBanner();
   if (view==="home") root.innerHTML = homeHTML();

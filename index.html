@@ -250,7 +250,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.2";
+const APP_VER = "1.3";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -1376,6 +1376,22 @@ function render(){
         el.textContent = `登録データ容量: ${(bytes/1048576).toFixed(1)} MB`;
       }
     }).catch(()=>{});
+  }
+  /* 写真上ティッカーの速度を一定にする:
+     アニメーションは「幅の半分を所要時間で移動」するため、
+     文字列が長いほど速くなってしまう。実際の幅を測り、
+     ピクセル毎秒が一定（ゆっくりめ）になるよう所要時間を個別に設定する */
+  if (view==="tierView"){
+    const SPEED = 35; /* px/秒 */
+    const tune = ()=>{
+      document.querySelectorAll(".hero-ticker .marquee-track").forEach((tr)=>{
+        const half = tr.scrollWidth / 2;
+        if (half > 0) tr.style.animationDuration = Math.max(10, half / SPEED) + "s";
+      });
+    };
+    tune();
+    /* Webフォント読み込み後に幅が変わる場合があるため再調整 */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(tune).catch(()=>{});
   }
 }
 

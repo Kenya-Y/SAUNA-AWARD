@@ -66,7 +66,7 @@ body{
   overflow:hidden;pointer-events:none;
 }
 .hero-ticker .marquee-track span{
-  font-size:18px;font-weight:200;letter-spacing:.12em;
+  font-size:14px;font-weight:200;letter-spacing:.12em;
   color:rgba(255,255,255,.6);
   text-shadow:0 1px 8px rgba(0,0,0,.3);
 }
@@ -250,7 +250,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.4";
+const APP_VER = "1.5";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -906,7 +906,7 @@ function homeHTML(){
       <div style="width:56px;height:1px;background:rgba(255,255,255,.4);margin:30px auto;"></div>
       <p style="font-size:13px;color:var(--paper-dim);letter-spacing:.2em;margin:0;">自分が行った、忘れがたきサウナを讃える。</p>
     </div>
-    <div style="padding:0 28px 40px;max-width:420px;width:100%;margin:0 auto;">
+    <div style="padding:0 28px calc(15vh + env(safe-area-inset-bottom));max-width:420px;width:100%;margin:0 auto;">
       <button class="btn" data-go="tiers">Start</button>
       <div style="height:14px;"></div>
       <button class="btn" data-go="settingsTiers" style="border-color:var(--line);color:var(--paper-dim);">設定</button>

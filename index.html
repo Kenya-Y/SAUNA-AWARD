@@ -50,6 +50,38 @@ body{
 /* 和名 */
 .waname{font-family:'Noto Sans JP',sans-serif;font-weight:700;color:#fff;}
 
+/* SAUNACHELIN風ワードマーク: 細身・大トラッキング・金 */
+.brand{
+  font-family:'Jost','Helvetica Neue',sans-serif;
+  font-weight:300;text-transform:uppercase;
+  letter-spacing:.3em;line-height:1.3;
+  background:var(--gold-grad);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+
+/* 各サウナ写真の上を流れるティッカー */
+.hero-ticker{
+  position:absolute;top:8px;left:0;right:0;z-index:1;
+  overflow:hidden;pointer-events:none;
+}
+.hero-ticker .marquee-track span{
+  font-size:26px;font-weight:200;letter-spacing:.1em;
+  color:rgba(255,255,255,.6);
+  text-shadow:0 1px 8px rgba(0,0,0,.3);
+}
+
+/* トップ/START/設定画面の背景画像レイヤー */
+#bgimg{
+  position:fixed;inset:0;z-index:-1;display:none;
+  background-size:cover;background-position:center;
+}
+#bgimg.on{display:block;}
+#bgimg::after{
+  content:"";position:absolute;inset:0;
+  background:rgba(5,4,3,.6);
+}
+
 .btn{
   font-family:'Jost',sans-serif;font-weight:400;letter-spacing:.35em;text-transform:uppercase;
   background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.45);
@@ -193,6 +225,7 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 </style>
 </head>
 <body>
+<div id="bgimg"></div>
 <div id="banner"></div>
 <div id="root"></div>
 <div id="cropper"></div>
@@ -217,7 +250,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.1";
+const APP_VER = "1.2";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -336,6 +369,14 @@ if (navigator.storage && navigator.storage.persist){
   navigator.storage.persist().catch(()=>{});
 }
 
+/* ---------------- 背景画像 ----------------
+   トップ/START/設定画面の背景。IDBのキー "bg" に保存。 */
+const BG_KEY = "bg";
+let appBg = null;
+const bgReady = idbGet(BG_KEY)
+  .then((v)=>{ appBg = (typeof v==="string" && v) ? v : null; if (appBg) render(); })
+  .catch(()=>{});
+
 /* ---------------- 容量の解放（DBの作り直し） ----------------
    IndexedDBは削除・上書き後もディスク上に残骸が残り、使用容量が
    減らないことがある。そこで削除系の操作後に、
@@ -366,7 +407,8 @@ function deleteOwnDatabase(){
    OSへの問い合わせ(navigator.storage.estimate)は内部ファイルの
    整理が終わるまで減少が反映されないため、表示にはこちらを使う */
 async function calcDataSize(){
-  let bytes = 0;
+  await bgReady;
+  let bytes = appBg ? appBg.length : 0;
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
@@ -382,9 +424,10 @@ async function rebuildDatabase(){
   if (rebuilding) return;
   rebuilding = true;
   try{
-    /* 1) 現在の登録内容をメモリへ退避 */
+    /* 1) 現在の登録内容（背景画像含む）をメモリへ退避 */
+    await bgReady;
     const all = {};
-    let hasAny = false;
+    let hasAny = !!appBg;
     for (const T of TIERS){
       const t = T.id;
       all[t] = cache[t] || await loadTier(t);
@@ -403,6 +446,7 @@ async function rebuildDatabase(){
           if (e && !isEmpty(e)) await idbSet(keyFor(t,i+1), e);
         }
       }
+      if (appBg) await idbSet(BG_KEY, appBg);
     }
     for (const T of TIERS) cache[T.id] = all[T.id];
   } finally {
@@ -572,7 +616,9 @@ function bytesToDataURL(bytes, mime){
 const extMime = (name)=>/\.png$/i.test(name) ? "image/png" : "image/jpeg";
 
 async function buildBackup(){
+  await bgReady;
   const files = [];
+  if (appBg) files.push({ name:"bg.jpg", data:dataURLtoBytes(appBg) });
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
@@ -604,11 +650,16 @@ async function restoreFromZip(file){
   const model = {1:[],2:[],3:[]};
   for (const t of [1,2,3]) for (let i=0;i<SLOTS;i++) model[t].push(blank());
   let recognized = 0;
+  let newBg = null;
   for (const f of entries){
     const csvMatch = f.name.match(/^def_tier([123])\.csv$/i);
     const imgMatch = f.name.match(/^data_tier([123])_([1-7])\.(jpg|jpeg|png)$/i);
     const miniMatch = f.name.match(/^mini_tier([123])_([1-7])_([123])\.(jpg|jpeg|png)$/i);
-    if (csvMatch){
+    const bgMatch = f.name.match(/^bg\.(jpg|jpeg|png)$/i);
+    if (bgMatch){
+      recognized++;
+      newBg = bytesToDataURL(f.data, extMime(f.name));
+    } else if (csvMatch){
       recognized++;
       const t = Number(csvMatch[1]);
       const lines = new TextDecoder().decode(f.data).split(/\r?\n/).filter(l=>l.trim()!=="");
@@ -642,6 +693,9 @@ async function restoreFromZip(file){
   try{ const db = await openDB(); db.close(); }catch(e){}
   dbPromise = null;
   await deleteOwnDatabase();
+  await bgReady;
+  appBg = newBg;
+  if (newBg) await idbSet(BG_KEY, newBg);
   for (const t of [1,2,3]){
     const arr = [];
     for (let i=0;i<SLOTS;i++){
@@ -675,6 +729,27 @@ async function compressMini(file){
     if (out.length < 500000) return out;
   }
   return c.toDataURL("image/jpeg",0.3);
+}
+
+function closeModal(){
+  const m = document.getElementById("modal");
+  m.classList.remove("open");
+  m.innerHTML = "";
+}
+
+/* 背景画面の設定メニュー: デフォルト or 写真を選択 */
+function showBgMenu(){
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="modal-box">
+      <p class="modal-msg">背景画面の設定<br><span style="font-size:12px;color:var(--paper-dim);">トップ・START・設定画面の背景を変更します</span></p>
+      <label class="save-btn" style="display:block;margin-bottom:12px;letter-spacing:.15em;">
+        写真を選択<input class="file-input js-bgfile" type="file" accept="image/*">
+      </label>
+      <button class="tool-btn js-bgdefault" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す</button>
+      <button class="back js-bgcancel" style="width:100%;">戻る</button>
+    </div>`;
+  modal.classList.add("open");
 }
 
 /* 確認ポップアップ: okLabel/cancelLabelのボタンで真偽を返す */
@@ -715,11 +790,14 @@ function applyCrop(){
   im.style.width = (crop.img.naturalWidth*crop.s)+"px";
   im.style.transform = `translate(${crop.tx}px,${crop.ty}px)`;
 }
-function openCropper(img, slot){
-  const fw = Math.min(Math.round(window.innerWidth*0.86), 360);
-  const fh = Math.round(fw*CROP_AR);
+function openCropper(img, opts){
+  const ar = opts.ar || CROP_AR;
+  let fw = Math.min(Math.round(window.innerWidth*0.86), 360);
+  let fh = Math.round(fw*ar);
+  const maxH = Math.round(window.innerHeight*0.6);
+  if (fh > maxH){ fh = maxH; fw = Math.max(80, Math.round(fh/ar)); }
   const min = Math.max(fw/img.naturalWidth, fh/img.naturalHeight);
-  crop = { img, slot, fw, fh, s:min, min, max:min*4,
+  crop = { img, opts, fw, fh, s:min, min, max:min*4,
            tx:(fw-img.naturalWidth*min)/2, ty:(fh-img.naturalHeight*min)/2, drag:null };
   cropperEl.innerHTML = `
     <p class="crop-note">切り取る範囲を選択してください<br>ドラッグで移動 ／ スライダーで拡大</p>
@@ -770,22 +848,18 @@ function closeCropper(){
 }
 async function confirmCrop(){
   if (!crop) return;
-  const { img, slot, s, tx, ty, fw, fh } = crop;
+  const { img, opts, s, tx, ty, fw, fh } = crop;
   const sx = -tx/s, sy = -ty/s, sw = fw/s, sh = fh/s;
   const c = document.createElement("canvas");
-  c.width = OUT_W; c.height = OUT_H;
-  c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, OUT_W, OUT_H);
+  c.width = opts.outW; c.height = opts.outH;
+  c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, opts.outW, opts.outH);
   let out = c.toDataURL("image/jpeg", 0.85);
   for (const q of [0.72, 0.6, 0.45, 0.32]){
     if (out.length < MAX_DATAURL) break;
     out = c.toDataURL("image/jpeg", q);
   }
   closeCropper();
-  setStatus(slot, "SAVING…");
-  const next = readSlotInputs(slot);
-  next.image = out;
-  await persistSlot(slot, next, true);
-  render();
+  await opts.onDone(out);
 }
 
 /* ---------------- state / render ---------------- */
@@ -828,7 +902,7 @@ function homeHTML(){
     ${marquee("Sauna Award − My Personal Sauna Ranking − ととのいの記録", true)}
     <div style="padding:0 28px;text-align:center;">
       <p class="eyebrow" style="margin-bottom:28px;">Personal Archive</p>
-      <h1 class="romaji" style="font-size:clamp(52px,15vw,110px);margin:0;">SAUNA<br>AWARD</h1>
+      <h1 class="brand" style="font-size:clamp(38px,10.5vw,80px);margin:0;">SAUNA<br>AWARD</h1>
       <div style="width:56px;height:1px;background:rgba(255,255,255,.4);margin:30px auto;"></div>
       <p style="font-size:13px;color:var(--paper-dim);letter-spacing:.2em;margin:0;">自分が行った、忘れがたきサウナを讃える。</p>
     </div>
@@ -855,7 +929,7 @@ function tiersHTML(isSettings){
     <header style="padding:20px 24px 0;">
       <button class="back" data-go="home">← Top</button>
       <p class="eyebrow" style="margin-top:18px;">${isSettings?"Settings":"Archive"}</p>
-      <h2 class="romaji" style="font-size:clamp(32px,9vw,54px);margin:6px 0 0;">SAUNA AWARD</h2>
+      <h2 class="brand" style="font-size:clamp(24px,6.8vw,42px);margin:6px 0 0;">SAUNA AWARD</h2>
       ${isSettings?`<p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;">［設定］各Tierに 7施設まで登録できます</p>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
         <button class="tool-btn js-backup">バックアップ（zip保存）</button>
@@ -868,8 +942,8 @@ function tiersHTML(isSettings){
     </header>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 24px;gap:18px;max-width:480px;width:100%;margin:0 auto;">
       ${rows}
+      ${isSettings?`<button class="tool-btn js-bgmenu" style="margin-top:6px;">背景画面の設定</button>`:""}
     </div>
-    ${marquee(isSettings?"Settings − 画像と施設情報を設定 − 7個まで":"Select Your Tier − 1〜7まで表示", true)}
     ${isSettings?`<p class="status" style="text-align:right;color:rgba(255,255,255,.35);padding:10px 18px calc(14px + env(safe-area-inset-bottom));margin:0;">ver ${APP_VER}</p>`:""}
   </div>`;
 }
@@ -888,8 +962,13 @@ function entryHTML(e, i, t){
     </article>`;
   }
   const href = safeHref(e.url);
+  /* 写真の上を流れるティッカー: Sauna Award − 番号 − ローマ字名 */
+  const tickerName = e.roman || e.title || "";
+  const tseg = esc(` Sauna Award − ${i+1} −${tickerName?` ${tickerName} −`:""} `.repeat(4));
+  const ticker = `<div class="hero-ticker"><div class="marquee-track"><span>${tseg}</span><span>${tseg}</span></div></div>`;
   const hero = `
     <div class="hero" ${e.image?`style="background-image:url('${e.image}');"`:""}>
+      ${ticker}
       ${numBlock}
       <div class="hero-inner">
         ${e.roman?`<h3 class="romaji">${esc(e.roman)}</h3>`:""}
@@ -937,7 +1016,6 @@ function tierViewHTML(){
         <p class="mq-font" style="font-size:12px;color:var(--paper-dim);margin:0;">${filled} / ${SLOTS}</p>
       </div>
     </header>
-    ${marquee(`ととのいの記録 − Tier ${t.roman} − Sauna Award`, true)}
     <main style="max-width:620px;margin:0 auto;padding:0 0 80px;">${items}</main>
   </div>`;
 }
@@ -1013,7 +1091,6 @@ function settingsHTML(){
         バックアップ・復元は設定トップ（Tier選択画面）から行えます。
       </p>
     </header>
-    ${marquee(`Settings − Tier ${t.roman} − 7個まで設定`, true)}
     <main style="max-width:560px;margin:0 auto;padding:8px 24px 80px;">${items}</main>
   </div>`;
 }
@@ -1109,6 +1186,23 @@ document.addEventListener("click", async (ev)=>{
     }
     return;
   }
+  const bgmEl = ev.target.closest(".js-bgmenu");
+  if (bgmEl){ showBgMenu(); return; }
+  const bgdEl = ev.target.closest(".js-bgdefault");
+  if (bgdEl){
+    closeModal();
+    await bgReady;
+    appBg = null;
+    try{ await idbDel(BG_KEY); }catch(e){}
+    /* 背景を消したぶん容量を戻す */
+    await rebuildDatabase();
+    render();
+    const msg = root.querySelector(".js-bakmsg");
+    if (msg) msg.textContent = "背景をデフォルトに戻しました";
+    return;
+  }
+  const bgcEl = ev.target.closest(".js-bgcancel");
+  if (bgcEl){ closeModal(); return; }
   const mdelEl = ev.target.closest(".js-minidel");
   if (mdelEl){
     const slot = Number(mdelEl.getAttribute("data-slot"));
@@ -1135,7 +1229,16 @@ document.addEventListener("change", async (ev)=>{
       try{ imgEl = await decodeViaImg(raw); }catch(e){}
       if (imgEl){
         /* 切り取り画面を表示し、ユーザーが範囲を選択してから設定 */
-        openCropper(imgEl, slot);
+        openCropper(imgEl, {
+          ar: CROP_AR, outW: OUT_W, outH: OUT_H,
+          onDone: async (out)=>{
+            setStatus(slot, "SAVING…");
+            const next = readSlotInputs(slot);
+            next.image = out;
+            await persistSlot(slot, next, true);
+            render();
+          }
+        });
       } else {
         /* 表示できない形式は従来の自動変換で保存 */
         setStatus(slot,"SAVING…");
@@ -1167,6 +1270,35 @@ document.addEventListener("change", async (ev)=>{
       render();
     }catch(e){
       setStatus(slot, e&&e.message?e.message:"ミニ写真の設定に失敗しました", true);
+    }
+    return;
+  }
+  if (ev.target.classList.contains("js-bgfile")){
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    closeModal();
+    if (!file) return;
+    try{
+      const raw = await fileToDataURL(file);
+      const imgEl = await decodeViaImg(raw);
+      /* スマホの画面サイズと同じ縦横比で切り抜き */
+      const ar = window.innerHeight / window.innerWidth;
+      openCropper(imgEl, {
+        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)),
+        onDone: async (out)=>{
+          await bgReady;
+          appBg = out;
+          try{ await idbSet(BG_KEY, out); }catch(e){ storageOK=false; showBanner(); }
+          /* 古い背景の残骸を掃除 */
+          await rebuildDatabase();
+          render();
+          const msg = root.querySelector(".js-bakmsg");
+          if (msg) msg.textContent = "背景画像を設定しました";
+        }
+      });
+    }catch(e){
+      const msg = root.querySelector(".js-bakmsg");
+      if (msg) msg.textContent = "この画像は背景に使用できませんでした";
     }
     return;
   }
@@ -1222,6 +1354,20 @@ function render(){
   else if (view==="settingsTiers") root.innerHTML = tiersHTML(true);
   else if (view==="tierView") root.innerHTML = tierViewHTML();
   else if (view==="settingsTier") root.innerHTML = settingsHTML();
+  /* 背景画像: トップ/START/設定画面のみに適用 */
+  const bgEl = document.getElementById("bgimg");
+  if (bgEl){
+    const showBg = appBg && (view==="home" || view==="tiers" || view==="settingsTiers");
+    if (showBg){
+      bgEl.style.backgroundImage = `url('${appBg}')`;
+      bgEl.classList.add("on");
+      root.style.background = "transparent";
+    } else {
+      bgEl.classList.remove("on");
+      bgEl.style.backgroundImage = "";
+      root.style.background = "";
+    }
+  }
   /* 設定トップでは現在の登録データ量を表示（実データを直接計算） */
   if (view==="settingsTiers"){
     calcDataSize().then((bytes)=>{

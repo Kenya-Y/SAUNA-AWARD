@@ -273,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "2.0";
+const APP_VER = "2.1";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -1414,7 +1414,7 @@ document.addEventListener("focusout",(ev)=>{
 });
 /* すべてのティッカーの速度を一定にする（トップ画面・写真上ティッカー共通） */
 const TICKER_SPEED = 35; /* 文字: px/秒 */
-const MINI_SPEED = 22;   /* ミニ写真: px/秒（サウナシュランに合わせたゆっくりめ） */
+const MINI_SPEED = 28;   /* ミニ写真: px/秒（ver1.9と2.0の中間の速さ） */
 function tuneMarquees(){
   document.querySelectorAll(".marquee-track").forEach((tr)=>{
     const half = tr.scrollWidth / 2;

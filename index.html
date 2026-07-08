@@ -89,6 +89,33 @@ body{
   transition:background .25s,color .25s;
 }
 .btn:active{background:var(--paper);color:var(--ink);}
+
+/* ボタンの設定: ブラック / ホワイト（背景を透かした すりガラス調）
+   .btn（START/設定/TIER）に加え .tool-btn（各種設定ボタン）にも適用。
+   #root 内に限定し、ポップアップ（#modal/#cropper）には反映しない。
+   transition:none で画面遷移直後に色が変わって見える現象を防ぐ */
+body.btn-black #root .btn,
+body.btn-black #root .tool-btn{
+  background:rgba(0,0,0,.28);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border-color:rgba(255,255,255,.4);
+  transition:none;
+}
+body.btn-black #root .btn:active{background:var(--paper);color:var(--ink);}
+body.btn-white #root .btn,
+body.btn-white #root .tool-btn{
+  background:rgba(255,255,255,.38);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border-color:rgba(255,255,255,.75);
+  color:var(--ink) !important; /* インラインの文字色指定より優先し、トップ画面「設定」も黒に統一 */
+  transition:none;
+}
+/* ホワイト時はボタン内のすべての文字を黒に（金のTier数字はグラデーションのまま） */
+body.btn-white #root .btn *,
+body.btn-white #root .tool-btn *{color:var(--ink) !important;}
+body.btn-white #root .btn:active{background:rgba(0,0,0,.4);color:var(--paper);}
 .back{
   font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.3em;font-size:11px;
   color:var(--paper-dim);background:none;border:none;cursor:pointer;padding:8px 0;
@@ -250,7 +277,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.5";
+const APP_VER = "1.8";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -377,6 +404,19 @@ const bgReady = idbGet(BG_KEY)
   .then((v)=>{ appBg = (typeof v==="string" && v) ? v : null; if (appBg) render(); })
   .catch(()=>{});
 
+/* ---------------- ボタンの配色設定 ----------------
+   "default" / "black" / "white" の約10バイトのフラグのみ保存
+   （画像等は伴わないため容量への影響は実質ゼロ） */
+const BTN_KEY = "btnstyle";
+let btnStyle = "default";
+function applyBtnStyle(){
+  document.body.classList.toggle("btn-black", btnStyle==="black");
+  document.body.classList.toggle("btn-white", btnStyle==="white");
+}
+const btnReady = idbGet(BTN_KEY)
+  .then((v)=>{ if (v==="black"||v==="white") btnStyle=v; applyBtnStyle(); })
+  .catch(()=>{});
+
 /* ---------------- 容量の解放（DBの作り直し） ----------------
    IndexedDBは削除・上書き後もディスク上に残骸が残り、使用容量が
    減らないことがある。そこで削除系の操作後に、
@@ -424,10 +464,11 @@ async function rebuildDatabase(){
   if (rebuilding) return;
   rebuilding = true;
   try{
-    /* 1) 現在の登録内容（背景画像含む）をメモリへ退避 */
+    /* 1) 現在の登録内容（背景画像・ボタン設定含む）をメモリへ退避 */
     await bgReady;
+    await btnReady;
     const all = {};
-    let hasAny = !!appBg;
+    let hasAny = !!appBg || btnStyle!=="default";
     for (const T of TIERS){
       const t = T.id;
       all[t] = cache[t] || await loadTier(t);
@@ -447,6 +488,7 @@ async function rebuildDatabase(){
         }
       }
       if (appBg) await idbSet(BG_KEY, appBg);
+      if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
     }
     for (const T of TIERS) cache[T.id] = all[T.id];
   } finally {
@@ -696,6 +738,9 @@ async function restoreFromZip(file){
   await bgReady;
   appBg = newBg;
   if (newBg) await idbSet(BG_KEY, newBg);
+  /* ボタン配色はUI設定のため復元後も維持する */
+  await btnReady;
+  if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
   for (const t of [1,2,3]){
     const arr = [];
     for (let i=0;i<SLOTS;i++){
@@ -747,6 +792,21 @@ function showBgMenu(){
         写真を選択<input class="file-input js-bgfile" type="file" accept="image/*">
       </label>
       <button class="tool-btn js-bgdefault" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す</button>
+      <button class="back js-bgcancel" style="width:100%;">戻る</button>
+    </div>`;
+  modal.classList.add("open");
+}
+
+/* ボタンの設定メニュー: デフォルト / ブラック / ホワイト */
+function showBtnMenu(){
+  const modal = document.getElementById("modal");
+  const mark = (v)=>btnStyle===v?" ✓":"";
+  modal.innerHTML = `
+    <div class="modal-box">
+      <p class="modal-msg">ボタンの設定<br><span style="font-size:12px;color:var(--paper-dim);">ボタンの背景色を変更します</span></p>
+      <button class="tool-btn js-btnset" data-val="default" style="width:100%;margin-bottom:10px;">デフォルト${mark("default")}</button>
+      <button class="tool-btn js-btnset" data-val="black" style="width:100%;margin-bottom:10px;background:rgba(0,0,0,.55);">ブラック${mark("black")}</button>
+      <button class="tool-btn js-btnset" data-val="white" style="width:100%;margin-bottom:14px;background:rgba(255,255,255,.75);color:var(--ink);">ホワイト${mark("white")}</button>
       <button class="back js-bgcancel" style="width:100%;">戻る</button>
     </div>`;
   modal.classList.add("open");
@@ -942,7 +1002,8 @@ function tiersHTML(isSettings){
     </header>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 24px;gap:18px;max-width:480px;width:100%;margin:0 auto;">
       ${rows}
-      ${isSettings?`<button class="tool-btn js-bgmenu" style="margin-top:6px;">背景画面の設定</button>`:""}
+      ${isSettings?`<button class="tool-btn js-bgmenu" style="margin-top:6px;">背景画面の設定</button>
+      <button class="tool-btn js-btnmenu">ボタンの設定</button>`:""}
     </div>
     ${isSettings?`<p class="status" style="text-align:right;color:rgba(255,255,255,.35);padding:10px 18px calc(14px + env(safe-area-inset-bottom));margin:0;">ver ${APP_VER}</p>`:""}
   </div>`;
@@ -1043,7 +1104,6 @@ function settingsHTML(){
       <div style="margin-top:18px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（和名）</p>
         <input class="tinput js-title" data-slot="${i}" maxlength="${MAX_TITLE}" placeholder="例：北こぶし知床 ホテル&リゾート" value="${v("title")}">
-        <div style="text-align:right;margin-top:4px;"><span class="status js-count" data-slot="${i}" style="color:var(--paper-dim);">${(e&&e.title?e.title.length:0)} / ${MAX_TITLE}</span></div>
       </div>
       <div style="margin-top:6px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（ローマ字）</p>
@@ -1188,6 +1248,24 @@ document.addEventListener("click", async (ev)=>{
   }
   const bgmEl = ev.target.closest(".js-bgmenu");
   if (bgmEl){ showBgMenu(); return; }
+  const btnmEl = ev.target.closest(".js-btnmenu");
+  if (btnmEl){ showBtnMenu(); return; }
+  const btnsEl = ev.target.closest(".js-btnset");
+  if (btnsEl){
+    const val = btnsEl.getAttribute("data-val");
+    closeModal();
+    await btnReady;
+    btnStyle = (val==="black"||val==="white") ? val : "default";
+    applyBtnStyle();
+    try{
+      if (btnStyle==="default") await idbDel(BTN_KEY);
+      else await idbSet(BTN_KEY, btnStyle);
+    }catch(e){}
+    render();
+    const msg = root.querySelector(".js-bakmsg");
+    if (msg) msg.textContent = `ボタンを${btnStyle==="black"?"ブラック":btnStyle==="white"?"ホワイト":"デフォルト"}に設定しました`;
+    return;
+  }
   const bgdEl = ev.target.closest(".js-bgdefault");
   if (bgdEl){
     closeModal();
@@ -1338,15 +1416,6 @@ document.addEventListener("focusout",(ev)=>{
     }
   }
 });
-/* 文字数カウンター */
-document.addEventListener("input",(ev)=>{
-  if (ev.target.classList && ev.target.classList.contains("js-title")){
-    const slot = ev.target.getAttribute("data-slot");
-    const c = root.querySelector(`.js-count[data-slot="${slot}"]`);
-    if (c) c.textContent = `${ev.target.value.length} / ${MAX_TITLE}`;
-  }
-});
-
 function render(){
   showBanner();
   if (view==="home") root.innerHTML = homeHTML();

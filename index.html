@@ -273,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.9";
+const APP_VER = "2.0";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -955,7 +955,7 @@ function go(v,t){
 function homeHTML(){
   return `
   <div class="fade" style="min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;">
-    ${marquee("Sauna Award − My Personal Sauna Ranking − ととのいの記録", true)}
+    <div></div>
     <div style="padding:0 28px;text-align:center;">
       <p class="eyebrow" style="margin-bottom:28px;">Personal Archive</p>
       <h1 class="brand" style="font-size:clamp(38px,10.5vw,80px);margin:0;">SAUNA<br>AWARD</h1>
@@ -1413,11 +1413,16 @@ document.addEventListener("focusout",(ev)=>{
   }
 });
 /* すべてのティッカーの速度を一定にする（トップ画面・写真上ティッカー共通） */
-const TICKER_SPEED = 35; /* px/秒 */
+const TICKER_SPEED = 35; /* 文字: px/秒 */
+const MINI_SPEED = 22;   /* ミニ写真: px/秒（サウナシュランに合わせたゆっくりめ） */
 function tuneMarquees(){
   document.querySelectorAll(".marquee-track").forEach((tr)=>{
     const half = tr.scrollWidth / 2;
     if (half > 0) tr.style.animationDuration = Math.max(10, half / TICKER_SPEED) + "s";
+  });
+  document.querySelectorAll(".mini-track").forEach((tr)=>{
+    const half = tr.scrollWidth / 2;
+    if (half > 0) tr.style.animationDuration = Math.max(15, half / MINI_SPEED) + "s";
   });
 }
 
@@ -1428,6 +1433,7 @@ function restartMarquees(){
     tr.style.animation = "none";
     void tr.offsetWidth; /* リフローを強制してリセットを確定 */
     tr.style.animation = "";
+    delete tr.dataset.lastT;
   });
   tuneMarquees();
 }
@@ -1435,6 +1441,34 @@ document.addEventListener("visibilitychange", ()=>{
   if (document.visibilityState === "visible") restartMarquees();
 });
 window.addEventListener("pageshow", ()=>restartMarquees());
+
+/* 見張り処理: 復帰イベントが発火しないケースやメモリ圧迫で
+   アニメーションが凍結した場合に備え、2秒ごとにミニ写真の
+   実際の位置(transform)を監視し、動いていなければ個別に再始動する。
+   これにより「どんな時でも流れる」ことを保証する */
+setInterval(()=>{
+  if (document.visibilityState !== "visible") return;
+  document.querySelectorAll(".mini-track").forEach((tr)=>{
+    /* 画像の読み込みで幅が変わったら速度を再調整 */
+    const w = String(tr.scrollWidth);
+    if (tr.dataset.lastW !== w){
+      tr.dataset.lastW = w;
+      tuneMarquees();
+    }
+    let cur = "";
+    try{ cur = getComputedStyle(tr).transform || ""; }catch(e){ return; }
+    if (tr.dataset.lastT !== undefined && tr.dataset.lastT === cur){
+      /* 2秒間まったく動いていない → 再始動 */
+      tr.style.animation = "none";
+      void tr.offsetWidth;
+      tr.style.animation = "";
+      tuneMarquees();
+      delete tr.dataset.lastT;
+      return;
+    }
+    tr.dataset.lastT = cur;
+  });
+}, 2000);
 
 function render(){
   showBanner();

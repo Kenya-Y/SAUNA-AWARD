@@ -96,18 +96,14 @@ body{
    transition:none で画面遷移直後に色が変わって見える現象を防ぐ */
 body.btn-black #root .btn,
 body.btn-black #root .tool-btn{
-  background:rgba(0,0,0,.28);
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
+  background:rgba(0,0,0,.3);
   border-color:rgba(255,255,255,.4);
   transition:none;
 }
 body.btn-black #root .btn:active{background:var(--paper);color:var(--ink);}
 body.btn-white #root .btn,
 body.btn-white #root .tool-btn{
-  background:rgba(255,255,255,.38);
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
+  background:rgba(255,255,255,.45);
   border-color:rgba(255,255,255,.75);
   color:var(--ink) !important; /* インラインの文字色指定より優先し、トップ画面「設定」も黒に統一 */
   transition:none;
@@ -202,7 +198,7 @@ body.btn-white #root .btn:active{background:rgba(0,0,0,.4);color:var(--paper);}
 .mini-strip{overflow:hidden;margin-top:22px;}
 .mini-track{display:inline-flex;animation:marquee 32s linear infinite;}
 .mini-track img{height:150px;width:auto;display:block;margin-right:6px;}
-@media (prefers-reduced-motion:reduce){.mini-track{animation:none;}}
+/* ミニ写真は「どんな時でも流れる」仕様のため reduced-motion でも停止しない */
 .mini-pick{
   width:100%;aspect-ratio:4/3;background:var(--ink-soft);overflow:hidden;
   display:flex;align-items:center;justify-content:center;
@@ -277,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "1.8";
+const APP_VER = "1.9";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -1047,7 +1043,7 @@ function entryHTML(e, i, t){
   const minis = (e.minis||[]).filter(Boolean);
   if (minis.length){
     let seq = [];
-    while (seq.length < 6) seq = seq.concat(minis);
+    while (seq.length < 8) seq = seq.concat(minis);
     const group = seq.map(m=>`<img src="${m}" alt="">`).join("");
     miniStrip = `<div class="mini-strip" aria-hidden="true"><div class="mini-track">${group}${group}</div></div>`;
   }
@@ -1416,6 +1412,30 @@ document.addEventListener("focusout",(ev)=>{
     }
   }
 });
+/* すべてのティッカーの速度を一定にする（トップ画面・写真上ティッカー共通） */
+const TICKER_SPEED = 35; /* px/秒 */
+function tuneMarquees(){
+  document.querySelectorAll(".marquee-track").forEach((tr)=>{
+    const half = tr.scrollWidth / 2;
+    if (half > 0) tr.style.animationDuration = Math.max(10, half / TICKER_SPEED) + "s";
+  });
+}
+
+/* Safariはバックグラウンド復帰時等にCSSアニメーションを停止させたままに
+   することがある。アニメーションを一旦外して強制リフローし、再始動させる */
+function restartMarquees(){
+  document.querySelectorAll(".marquee-track, .mini-track").forEach((tr)=>{
+    tr.style.animation = "none";
+    void tr.offsetWidth; /* リフローを強制してリセットを確定 */
+    tr.style.animation = "";
+  });
+  tuneMarquees();
+}
+document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState === "visible") restartMarquees();
+});
+window.addEventListener("pageshow", ()=>restartMarquees());
+
 function render(){
   showBanner();
   if (view==="home") root.innerHTML = homeHTML();
@@ -1446,21 +1466,9 @@ function render(){
       }
     }).catch(()=>{});
   }
-  /* すべてのティッカーの速度を一定にする:
-     アニメーションは「幅の半分を所要時間で移動」するため、
-     文字列が長いほど速くなってしまう。実際の幅を測り、
-     ピクセル毎秒が一定（ゆっくりめ）になるよう所要時間を個別に設定する。
-     トップ画面・Tier画面の写真上ティッカーとも同じ速度。 */
-  const SPEED = 35; /* px/秒 */
-  const tune = ()=>{
-    document.querySelectorAll(".marquee-track").forEach((tr)=>{
-      const half = tr.scrollWidth / 2;
-      if (half > 0) tr.style.animationDuration = Math.max(10, half / SPEED) + "s";
-    });
-  };
-  tune();
-  /* Webフォント読み込み後に幅が変わる場合があるため再調整 */
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(tune).catch(()=>{});
+  /* ティッカーの速度調整（共通関数）。フォント読み込み後にも再調整 */
+  tuneMarquees();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(tuneMarquees).catch(()=>{});
 }
 
 render();

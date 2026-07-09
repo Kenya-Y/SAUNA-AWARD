@@ -273,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "2.1";
+const APP_VER = "2.2";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -400,6 +400,16 @@ const bgReady = idbGet(BG_KEY)
   .then((v)=>{ appBg = (typeof v==="string" && v) ? v : null; if (appBg) render(); })
   .catch(()=>{});
 
+/* ---------------- Tier別タイトル背景 ----------------
+   Tier画面冒頭のタイトル画面の背景。IDBのキー "bgt1"〜"bgt3" に保存。 */
+const tierBgs = { 1:null, 2:null, 3:null };
+const tierBgKey = (t)=>`bgt${t}`;
+const tierBgReady = Promise.all([1,2,3].map((t)=>
+  idbGet(tierBgKey(t))
+    .then((v)=>{ if (typeof v==="string" && v) tierBgs[t]=v; })
+    .catch(()=>{})
+)).then(()=>{ if (view==="tierView") render(); });
+
 /* ---------------- ボタンの配色設定 ----------------
    "default" / "black" / "white" の約10バイトのフラグのみ保存
    （画像等は伴わないため容量への影響は実質ゼロ） */
@@ -444,7 +454,9 @@ function deleteOwnDatabase(){
    整理が終わるまで減少が反映されないため、表示にはこちらを使う */
 async function calcDataSize(){
   await bgReady;
+  await tierBgReady;
   let bytes = appBg ? appBg.length : 0;
+  for (const t of [1,2,3]) if (tierBgs[t]) bytes += tierBgs[t].length;
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
@@ -460,11 +472,12 @@ async function rebuildDatabase(){
   if (rebuilding) return;
   rebuilding = true;
   try{
-    /* 1) 現在の登録内容（背景画像・ボタン設定含む）をメモリへ退避 */
+    /* 1) 現在の登録内容（背景画像・Tier別背景・ボタン設定含む）をメモリへ退避 */
     await bgReady;
+    await tierBgReady;
     await btnReady;
     const all = {};
-    let hasAny = !!appBg || btnStyle!=="default";
+    let hasAny = !!appBg || btnStyle!=="default" || !!tierBgs[1] || !!tierBgs[2] || !!tierBgs[3];
     for (const T of TIERS){
       const t = T.id;
       all[t] = cache[t] || await loadTier(t);
@@ -484,6 +497,7 @@ async function rebuildDatabase(){
         }
       }
       if (appBg) await idbSet(BG_KEY, appBg);
+      for (const t of [1,2,3]) if (tierBgs[t]) await idbSet(tierBgKey(t), tierBgs[t]);
       if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
     }
     for (const T of TIERS) cache[T.id] = all[T.id];
@@ -655,8 +669,10 @@ const extMime = (name)=>/\.png$/i.test(name) ? "image/png" : "image/jpeg";
 
 async function buildBackup(){
   await bgReady;
+  await tierBgReady;
   const files = [];
   if (appBg) files.push({ name:"bg.jpg", data:dataURLtoBytes(appBg) });
+  for (const t of [1,2,3]) if (tierBgs[t]) files.push({ name:`bg_tier${t}.jpg`, data:dataURLtoBytes(tierBgs[t]) });
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
@@ -689,14 +705,19 @@ async function restoreFromZip(file){
   for (const t of [1,2,3]) for (let i=0;i<SLOTS;i++) model[t].push(blank());
   let recognized = 0;
   let newBg = null;
+  const newTierBgs = { 1:null, 2:null, 3:null };
   for (const f of entries){
     const csvMatch = f.name.match(/^def_tier([123])\.csv$/i);
     const imgMatch = f.name.match(/^data_tier([123])_([1-7])\.(jpg|jpeg|png)$/i);
     const miniMatch = f.name.match(/^mini_tier([123])_([1-7])_([123])\.(jpg|jpeg|png)$/i);
     const bgMatch = f.name.match(/^bg\.(jpg|jpeg|png)$/i);
+    const tbgMatch = f.name.match(/^bg_tier([123])\.(jpg|jpeg|png)$/i);
     if (bgMatch){
       recognized++;
       newBg = bytesToDataURL(f.data, extMime(f.name));
+    } else if (tbgMatch){
+      recognized++;
+      newTierBgs[Number(tbgMatch[1])] = bytesToDataURL(f.data, extMime(f.name));
     } else if (csvMatch){
       recognized++;
       const t = Number(csvMatch[1]);
@@ -734,6 +755,11 @@ async function restoreFromZip(file){
   await bgReady;
   appBg = newBg;
   if (newBg) await idbSet(BG_KEY, newBg);
+  await tierBgReady;
+  for (const t of [1,2,3]){
+    tierBgs[t] = newTierBgs[t];
+    if (newTierBgs[t]) await idbSet(tierBgKey(t), newTierBgs[t]);
+  }
   /* ボタン配色はUI設定のため復元後も維持する */
   await btnReady;
   if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
@@ -803,6 +829,22 @@ function showBtnMenu(){
       <button class="tool-btn js-btnset" data-val="default" style="width:100%;margin-bottom:10px;">デフォルト${mark("default")}</button>
       <button class="tool-btn js-btnset" data-val="black" style="width:100%;margin-bottom:10px;background:rgba(0,0,0,.55);">ブラック${mark("black")}</button>
       <button class="tool-btn js-btnset" data-val="white" style="width:100%;margin-bottom:14px;background:rgba(255,255,255,.75);color:var(--ink);">ホワイト${mark("white")}</button>
+      <button class="back js-bgcancel" style="width:100%;">戻る</button>
+    </div>`;
+  modal.classList.add("open");
+}
+
+/* Tierタイトル背景の設定メニュー */
+function showTierBgMenu(t){
+  const T = TIERS.find(x=>x.id===t);
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="modal-box">
+      <p class="modal-msg">Tier ${T.roman} タイトル背景の設定<br><span style="font-size:12px;color:var(--paper-dim);">Tier ${T.roman} のタイトル画面の背景を変更します</span></p>
+      <label class="save-btn" style="display:block;margin-bottom:12px;letter-spacing:.15em;">
+        写真を選択<input class="file-input js-tbgfile" type="file" accept="image/*" data-tier="${t}">
+      </label>
+      <button class="tool-btn js-tbgdefault" data-tier="${t}" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す</button>
       <button class="back js-bgcancel" style="width:100%;">戻る</button>
     </div>`;
   modal.classList.add("open");
@@ -1020,15 +1062,16 @@ function entryHTML(e, i, t){
   }
   const href = safeHref(e.url);
   /* 写真の上を流れるティッカー: Sauna Award − 番号 − ローマ字名 */
-  const tickerName = e.roman || e.title || "";
-  const tseg = esc(` Sauna Award − ${i+1} −${tickerName?` ${tickerName} −`:""} `.repeat(4));
+  /* ローマ字名: 「¥」（および￥・バックスラッシュ）を改行として扱う */
+  const tickerName = (e.roman || e.title || "").replace(/[¥￥\\]/g, " ");
+  const tseg = esc(` Sauna Award − ${i+1} −${tickerName.trim()?` ${tickerName} −`:""} `.repeat(4));
   const ticker = `<div class="hero-ticker"><div class="marquee-track"><span>${tseg}</span><span>${tseg}</span></div></div>`;
   const hero = `
     <div class="hero" ${e.image?`style="background-image:url('${e.image}');"`:""}>
       ${ticker}
       ${numBlock}
       <div class="hero-inner">
-        ${e.roman?`<h3 class="romaji">${esc(e.roman)}</h3>`:""}
+        ${e.roman?`<h3 class="romaji">${esc(e.roman).replace(/[¥￥\\]/g,"<br>")}</h3>`:""}
         ${e.title?`<p class="waname">${esc(e.title)}</p>`:""}
         ${href?`<a class="detail-link" href="${esc(href)}" target="_blank" rel="noopener">⇗ 施設詳細へ</a>`:""}
       </div>
@@ -1061,8 +1104,17 @@ function tierViewHTML(){
   if (!arr) return loadingHTML("tiers");
   const filled = arr.filter(Boolean).length;
   const items = arr.map((e,i)=>entryHTML(e,i,t)).join("");
+  /* タイトル画面: 1画面分の高さで表示し、下スクロールで一覧へ。
+     Tier別の背景画像が設定されていれば全面に表示（薄暗いフィルター付き） */
+  const tbg = tierBgs[activeTier];
+  const titleSec = `
+  <section style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;${tbg?`background:linear-gradient(rgba(5,4,3,.55),rgba(5,4,3,.55)),url('${tbg}') center/cover no-repeat;`:""}">
+    <p class="eyebrow" style="margin:0 0 20px;">Sauna Award</p>
+    <h1 class="romaji" style="font-size:clamp(52px,15vw,96px);margin:0;">TIER <span class="num-gold" style="font-size:1.05em;">${t.roman}</span></h1>
+  </section>`;
   return `
   <div class="fade" style="min-height:100vh;">
+    ${titleSec}
     <header style="padding:20px 22px 14px;">
       <button class="back" data-go="tiers">← Tiers</button>
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:14px;">
@@ -1146,6 +1198,10 @@ function settingsHTML(){
         画像は写真アプリから選択。入力後は「保存」を押してください。<br>
         バックアップ・復元は設定トップ（Tier選択画面）から行えます。
       </p>
+      <div style="margin-top:14px;">
+        <button class="tool-btn js-tbgmenu">Tier ${t.roman} タイトル背景の設定</button>
+        <p class="status js-tiermsg" style="color:var(--gold);margin-top:8px;display:block;"></p>
+      </div>
     </header>
     <main style="max-width:560px;margin:0 auto;padding:8px 24px 80px;">${items}</main>
   </div>`;
@@ -1275,6 +1331,22 @@ document.addEventListener("click", async (ev)=>{
     if (msg) msg.textContent = "背景をデフォルトに戻しました";
     return;
   }
+  const tbgmEl = ev.target.closest(".js-tbgmenu");
+  if (tbgmEl){ showTierBgMenu(activeTier); return; }
+  const tbgdEl = ev.target.closest(".js-tbgdefault");
+  if (tbgdEl){
+    const t = Number(tbgdEl.getAttribute("data-tier"));
+    closeModal();
+    await tierBgReady;
+    tierBgs[t] = null;
+    try{ await idbDel(tierBgKey(t)); }catch(e){}
+    /* 背景を消したぶん容量を戻す */
+    await rebuildDatabase();
+    render();
+    const msg = root.querySelector(".js-tiermsg");
+    if (msg) msg.textContent = "タイトル背景をデフォルトに戻しました";
+    return;
+  }
   const bgcEl = ev.target.closest(".js-bgcancel");
   if (bgcEl){ closeModal(); return; }
   const mdelEl = ev.target.closest(".js-minidel");
@@ -1344,6 +1416,36 @@ document.addEventListener("change", async (ev)=>{
       render();
     }catch(e){
       setStatus(slot, e&&e.message?e.message:"ミニ写真の設定に失敗しました", true);
+    }
+    return;
+  }
+  if (ev.target.classList.contains("js-tbgfile")){
+    const t = Number(ev.target.getAttribute("data-tier"));
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    closeModal();
+    if (!file) return;
+    try{
+      const raw = await fileToDataURL(file);
+      const imgEl = await decodeViaImg(raw);
+      /* トップ画面の背景と同じく、スマホの画面サイズと同じ縦横比で切り抜き */
+      const ar = window.innerHeight / window.innerWidth;
+      openCropper(imgEl, {
+        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)),
+        onDone: async (out)=>{
+          await tierBgReady;
+          tierBgs[t] = out;
+          try{ await idbSet(tierBgKey(t), out); }catch(e){ storageOK=false; showBanner(); }
+          /* 古い背景の残骸を掃除 */
+          await rebuildDatabase();
+          render();
+          const msg = root.querySelector(".js-tiermsg");
+          if (msg) msg.textContent = "タイトル背景を設定しました";
+        }
+      });
+    }catch(e){
+      const msg = root.querySelector(".js-tiermsg");
+      if (msg) msg.textContent = "この画像は背景に使用できませんでした";
     }
     return;
   }
@@ -1469,6 +1571,33 @@ setInterval(()=>{
     tr.dataset.lastT = cur;
   });
 }, 2000);
+
+/* ---------------- スワイプで戻る ----------------
+   画面を左から右へスワイプすると前の画面へ戻る。
+   右から左（進む）は実装しない。切り抜き・ポップアップ表示中は無効。 */
+function goBack(){
+  const map = { tiers:"home", settingsTiers:"home", tierView:"tiers", settingsTier:"settingsTiers" };
+  const target = map[view];
+  if (target) go(target);
+}
+let swipeStart = null;
+document.addEventListener("touchstart",(ev)=>{
+  const cropOpen = document.getElementById("cropper").classList.contains("open");
+  const modalOpen = document.getElementById("modal").classList.contains("open");
+  if (cropOpen || modalOpen || ev.touches.length!==1){ swipeStart = null; return; }
+  const t = ev.touches[0];
+  swipeStart = { x:t.clientX, y:t.clientY, time:Date.now() };
+},{passive:true});
+document.addEventListener("touchend",(ev)=>{
+  if (!swipeStart) return;
+  const t = ev.changedTouches[0];
+  const dx = t.clientX - swipeStart.x;
+  const dy = Math.abs(t.clientY - swipeStart.y);
+  const dt = Date.now() - swipeStart.time;
+  swipeStart = null;
+  /* 左→右へ80px以上・縦ブレ60px未満・0.8秒以内のスワイプで戻る */
+  if (dx > 80 && dy < 60 && dt < 800) goBack();
+},{passive:true});
 
 function render(){
   showBanner();

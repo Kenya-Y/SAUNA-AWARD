@@ -273,7 +273,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "2.2";
+const APP_VER = "2.3";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -672,7 +672,7 @@ async function buildBackup(){
   await tierBgReady;
   const files = [];
   if (appBg) files.push({ name:"bg.jpg", data:dataURLtoBytes(appBg) });
-  for (const t of [1,2,3]) if (tierBgs[t]) files.push({ name:`bg_tier${t}.jpg`, data:dataURLtoBytes(tierBgs[t]) });
+  for (const t of [1,2,3]) if (tierBgs[t] && tierBgs[t].startsWith("data:")) files.push({ name:`bg_tier${t}.jpg`, data:dataURLtoBytes(tierBgs[t]) });
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
@@ -757,8 +757,15 @@ async function restoreFromZip(file){
   if (newBg) await idbSet(BG_KEY, newBg);
   await tierBgReady;
   for (const t of [1,2,3]){
-    tierBgs[t] = newTierBgs[t];
-    if (newTierBgs[t]) await idbSet(tierBgKey(t), newTierBgs[t]);
+    if (newTierBgs[t]){
+      tierBgs[t] = newTierBgs[t];
+      await idbSet(tierBgKey(t), newTierBgs[t]);
+    } else if (tierBgs[t]==="none"){
+      /* 「背景設定なし」はUI設定のため復元後も維持する */
+      await idbSet(tierBgKey(t), "none");
+    } else {
+      tierBgs[t] = null;
+    }
   }
   /* ボタン配色はUI設定のため復元後も維持する */
   await btnReady;
@@ -834,17 +841,26 @@ function showBtnMenu(){
   modal.classList.add("open");
 }
 
-/* Tierタイトル背景の設定メニュー */
+/* Tierタイトル背景の設定メニュー
+   状態: 画像(dataURL) / null(デフォルト黒のタイトル画面) / "none"(タイトル画面なし) */
 function showTierBgMenu(t){
   const T = TIERS.find(x=>x.id===t);
+  const cur = tierBgs[t];
+  const mark = (v)=>{
+    if (v==="image") return (cur && cur!=="none") ? " ✓" : "";
+    if (v==="default") return (cur===null) ? " ✓" : "";
+    if (v==="none") return (cur==="none") ? " ✓" : "";
+    return "";
+  };
   const modal = document.getElementById("modal");
   modal.innerHTML = `
     <div class="modal-box">
       <p class="modal-msg">Tier ${T.roman} タイトル背景の設定<br><span style="font-size:12px;color:var(--paper-dim);">Tier ${T.roman} のタイトル画面の背景を変更します</span></p>
       <label class="save-btn" style="display:block;margin-bottom:12px;letter-spacing:.15em;">
-        写真を選択<input class="file-input js-tbgfile" type="file" accept="image/*" data-tier="${t}">
+        写真を選択${mark("image")}<input class="file-input js-tbgfile" type="file" accept="image/*" data-tier="${t}">
       </label>
-      <button class="tool-btn js-tbgdefault" data-tier="${t}" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す</button>
+      <button class="tool-btn js-tbgdefault" data-tier="${t}" style="width:100%;margin-bottom:10px;">デフォルト（黒）に戻す${mark("default")}</button>
+      <button class="tool-btn js-tbgnone" data-tier="${t}" style="width:100%;margin-bottom:14px;">背景設定なし（タイトル画面を表示しない）${mark("none")}</button>
       <button class="back js-bgcancel" style="width:100%;">戻る</button>
     </div>`;
   modal.classList.add("open");
@@ -1105,9 +1121,10 @@ function tierViewHTML(){
   const filled = arr.filter(Boolean).length;
   const items = arr.map((e,i)=>entryHTML(e,i,t)).join("");
   /* タイトル画面: 1画面分の高さで表示し、下スクロールで一覧へ。
+     "none"(背景設定なし)の場合はタイトル画面自体を出力しない(ver2.1相当)。
      Tier別の背景画像が設定されていれば全面に表示（薄暗いフィルター付き） */
   const tbg = tierBgs[activeTier];
-  const titleSec = `
+  const titleSec = (tbg==="none") ? "" : `
   <section style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;${tbg?`background:linear-gradient(rgba(5,4,3,.55),rgba(5,4,3,.55)),url('${tbg}') center/cover no-repeat;`:""}">
     <p class="eyebrow" style="margin:0 0 20px;">Sauna Award</p>
     <h1 class="romaji" style="font-size:clamp(52px,15vw,96px);margin:0;">TIER <span class="num-gold" style="font-size:1.05em;">${t.roman}</span></h1>
@@ -1345,6 +1362,20 @@ document.addEventListener("click", async (ev)=>{
     render();
     const msg = root.querySelector(".js-tiermsg");
     if (msg) msg.textContent = "タイトル背景をデフォルトに戻しました";
+    return;
+  }
+  const tbgnEl = ev.target.closest(".js-tbgnone");
+  if (tbgnEl){
+    const t = Number(tbgnEl.getAttribute("data-tier"));
+    closeModal();
+    await tierBgReady;
+    tierBgs[t] = "none"; /* タイトル画面を表示しないモード */
+    try{ await idbSet(tierBgKey(t), "none"); }catch(e){}
+    /* 画像が設定されていた場合はその残骸を掃除して容量を戻す */
+    await rebuildDatabase();
+    render();
+    const msg = root.querySelector(".js-tiermsg");
+    if (msg) msg.textContent = "タイトル画面を表示しない設定にしました";
     return;
   }
   const bgcEl = ev.target.closest(".js-bgcancel");

@@ -71,7 +71,7 @@ body{
   text-shadow:0 1px 8px rgba(0,0,0,.3);
 }
 
-/* トップ/START/設定画面の背景画像レイヤー */
+/* トップ/AWARD/設定画面の背景画像レイヤー */
 #bgimg{
   position:fixed;inset:0;z-index:-1;display:none;
   background-size:cover;background-position:center;
@@ -91,7 +91,7 @@ body{
 .btn:active{background:var(--paper);color:var(--ink);}
 
 /* ボタンの設定: ブラック / ホワイト（背景を透かした すりガラス調）
-   .btn（START/設定/TIER）に加え .tool-btn（各種設定ボタン）にも適用。
+   .btn（メニュー/設定/TIER）に加え .tool-btn（各種設定ボタン）にも適用。
    #root 内に限定し、ポップアップ（#modal/#cropper）には反映しない。
    transition:none で画面遷移直後に色が変わって見える現象を防ぐ */
 body.btn-black #root .btn,
@@ -245,6 +245,273 @@ body.btn-white #root .btn:active{background:rgba(0,0,0,.4);color:var(--paper);}
   display:flex;align-items:center;justify-content:center;
 }
 img.entry{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* =====================================================================
+   DAIALY / ARCHIVE（ver3.0で追加）— 本体と衝突しないよう x- 接頭辞で統一
+   ===================================================================== */
+:root{--sun:#D98A7E;--sat:#8FA9C9;}
+@keyframes xFade{from{opacity:0;}to{opacity:1;}}
+@keyframes xSlideNext{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:none;}}
+@keyframes xSlidePrev{from{opacity:0;transform:translateX(-40px);}to{opacity:1;transform:none;}}
+.x-fade{animation:xFade .35s ease both;}
+.x-slide-next{animation:xSlideNext .28s ease both;}
+.x-slide-prev{animation:xSlidePrev .28s ease both;}
+@media (prefers-reduced-motion:reduce){.x-fade,.x-slide-next,.x-slide-prev{animation:none;}}
+.x-link{background:none;border:none;color:var(--gold);font-family:'Noto Sans JP',sans-serif;font-size:12px;text-decoration:underline;text-underline-offset:4px;cursor:pointer;padding:6px 0;}
+.x-bar{width:3px;border-radius:2px;background:var(--gold-grad);flex:none;align-self:stretch;}
+.x-etext{display:flex;flex-direction:column;min-width:0;gap:4px;}
+.x-nm{font-weight:700;font-size:15px;line-height:1.5;word-break:break-word;}
+.x-lc{font-size:12px;color:var(--paper-dim);display:flex;align-items:center;gap:4px;line-height:1.5;}
+.x-lc svg{width:12px;height:12px;flex:none;}
+.x-warn{color:#D9A27A;}
+.x-thumb{width:64px;aspect-ratio:3/2;object-fit:cover;border-radius:6px;flex:none;display:block;background:var(--ink-soft);}
+.x-thumb.ph{display:flex;align-items:center;justify-content:center;color:var(--gold);}
+.x-thumb.ph svg{width:20px;height:20px;}
+.x-bars{display:flex;gap:6px;}
+.x-bars i{display:block;width:6px;height:30px;border:1px solid var(--gold);}
+.x-bars i.on{background:var(--gold-grad);border-color:transparent;}
+.x-bars.mini{gap:4px;}
+.x-bars.mini i{width:4px;height:16px;}
+.btn.x-danger{border-color:rgba(217,115,98,.55);color:#D97362;}
+
+/* ---------- DAIALY ---------- */
+/* body側でセーフエリア分の余白があるため、先頭要素は負のマージンで画面最上部から描画する */
+.x-hdr{
+  position:sticky;top:0;z-index:15;background:rgba(10,9,8,.96);
+  margin-top:calc(-1 * env(safe-area-inset-top));
+  padding:calc(env(safe-area-inset-top) + 8px) 16px 10px;border-bottom:1px solid var(--line);
+}
+.x-hdr-top{display:flex;justify-content:space-between;align-items:center;}
+.x-hdr-main{display:flex;justify-content:space-between;align-items:center;margin-top:2px;}
+.x-mnav{display:flex;align-items:center;gap:2px;}
+.x-arrow{background:none;border:none;color:var(--paper-dim);cursor:pointer;width:36px;height:42px;display:flex;align-items:center;justify-content:center;padding:0;}
+.x-arrow svg{width:18px;height:18px;}
+.x-month{margin:0 4px;display:flex;align-items:baseline;font-weight:400;}
+.x-my{font-family:'Jost',sans-serif;font-size:19px;font-weight:300;color:var(--paper-dim);letter-spacing:.04em;}
+.x-mm{
+  font-family:'Jost',sans-serif;font-size:34px;font-weight:500;line-height:1;
+  background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+.x-mj{font-family:'Noto Sans JP',sans-serif;font-size:13px;color:var(--paper-dim);margin:0 3px;}
+.x-today{border:1px solid rgba(255,255,255,.45);background:transparent;color:var(--paper);border-radius:999px;padding:8px 16px;font-family:'Jost',sans-serif;font-weight:400;font-size:11px;letter-spacing:.22em;cursor:pointer;}
+.x-today:active{background:var(--paper);color:var(--ink);}
+.x-content{padding-bottom:calc(env(safe-area-inset-bottom) + 110px);}
+.x-cal{padding:0 8px;}
+.x-wdrow{display:grid;grid-template-columns:repeat(7,1fr);}
+.x-wdrow span{font-size:11px;text-align:center;color:var(--paper-dim);padding:10px 0 8px;}
+.x-wdrow .wd0{color:var(--sun);} .x-wdrow .wd6{color:var(--sat);}
+.x-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--line);}
+.x-cell{
+  min-width:0;min-height:66px;background:transparent;border:none;border-bottom:1px solid var(--line);
+  color:var(--paper);display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 2px 5px;cursor:pointer;border-radius:6px;font:inherit;
+}
+.x-cell.blank{cursor:default;}
+.x-cell.sel{box-shadow:inset 0 0 0 1px var(--gold);}
+.x-dnum{font-family:'Jost',sans-serif;font-size:14px;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;flex:none;}
+.x-cell.wd0 .x-dnum{color:var(--sun);} .x-cell.wd6 .x-dnum{color:var(--sat);}
+.x-cell.hol .x-dnum{color:var(--sun);}
+.x-cell.today .x-dnum{background:var(--gold-grad);color:var(--ink);font-weight:500;}
+.x-hname{display:block;width:100%;font-size:8px;line-height:1.25;color:var(--sun);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.x-chip{
+  display:block;width:100%;font-size:9px;line-height:15px;padding:0 3px;text-align:left;
+  border-left:2px solid var(--gold);background:rgba(217,194,122,.16);color:#F0D98F;
+  border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.x-more{font-family:'Jost',sans-serif;font-size:9px;color:var(--paper-dim);line-height:1;}
+.x-daysec{padding:22px 18px 0;max-width:620px;margin:0 auto;}
+.x-daysec-h{font-size:16px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;letter-spacing:.04em;}
+.x-tag{font-family:'Jost',sans-serif;font-weight:400;font-size:10px;letter-spacing:.2em;color:var(--ink);background:var(--gold-grad);border-radius:999px;padding:2px 9px;}
+.x-htag{font-size:11px;font-weight:500;color:var(--sun);border:1px solid rgba(217,138,126,.5);border-radius:999px;padding:1px 9px;letter-spacing:.04em;}
+.x-entry{
+  display:flex;gap:12px;align-items:center;width:100%;text-align:left;cursor:pointer;font:inherit;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;
+  padding:12px;margin-bottom:10px;color:var(--paper);
+}
+.x-entry:active{background:rgba(255,255,255,.09);}
+.x-lrow{display:flex;gap:14px;align-items:flex-start;padding:12px 18px;min-height:58px;border-bottom:1px solid var(--line);cursor:pointer;}
+.x-lrow.sel{background:rgba(217,194,122,.09);}
+.x-lday{width:32px;flex:none;display:flex;flex-direction:column;align-items:center;padding-top:2px;}
+.x-ldnum{font-family:'Jost',sans-serif;font-size:22px;font-weight:400;line-height:1;}
+.x-lwd{font-size:10px;color:var(--paper-dim);margin-top:5px;}
+.x-lday.wd0 .x-ldnum,.x-lday.wd0 .x-lwd{color:var(--sun);}
+.x-lday.wd6 .x-ldnum,.x-lday.wd6 .x-lwd{color:var(--sat);}
+.x-lday.hol .x-ldnum,.x-lday.hol .x-lwd{color:var(--sun);}
+.x-lday.today .x-ldnum{
+  font-weight:600;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+.x-lhol{font-size:11px;color:var(--sun);letter-spacing:.06em;line-height:1.4;}
+.x-lents{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;padding-top:2px;}
+.x-lent{display:flex;gap:10px;align-items:center;width:100%;text-align:left;cursor:pointer;background:none;border:none;color:var(--paper);padding:0;font:inherit;}
+.x-lent .x-thumb{width:52px;}
+.x-bbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:4px;
+  padding:8px 18px calc(env(safe-area-inset-bottom) + 8px);
+  background:rgba(10,9,8,.95);border-top:1px solid var(--line);
+}
+.x-tab{background:none;border:none;color:var(--paper-dim);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Jost',sans-serif;font-weight:400;font-size:10px;letter-spacing:.16em;padding:6px 12px;}
+.x-tab svg{width:24px;height:24px;}
+.x-tab.on{color:var(--gold);}
+.x-plus{
+  margin-left:auto;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--gold-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.45);
+}
+.x-plus svg{width:24px;height:24px;}
+.x-plus:active{transform:scale(.94);}
+
+/* ---------- 登録画面（DAIALY・ARCHIVE共通） ---------- */
+.x-reg{min-height:100vh;}
+.x-reg-hdr{
+  position:sticky;top:0;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  margin-top:calc(-1 * env(safe-area-inset-top));
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 14px;
+  background:rgba(10,9,8,.96);border-bottom:1px solid var(--line);
+}
+.x-reg-cancel{justify-self:start;background:none;border:none;color:var(--paper-dim);font-family:'Noto Sans JP',sans-serif;font-size:14px;padding:6px 0;cursor:pointer;}
+/* TIER設定画面の見出しと同じ書体（極太サンセリフ・大文字） */
+.x-reg-title{margin:0;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:19px;letter-spacing:.02em;white-space:nowrap;}
+.x-reg-ok{justify-self:end;background:none;border:none;color:var(--gold);font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:14px;padding:6px 0;cursor:pointer;}
+.x-reg-ok.off{opacity:.35;}
+.x-reg-body{padding:4px 20px calc(env(safe-area-inset-bottom) + 40px);max-width:560px;margin:0 auto;}
+.x-reg-note{font-size:12px;color:var(--gold);letter-spacing:.06em;margin:16px 0 0;line-height:1.8;}
+.x-field{display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.22);padding:4px 2px;}
+.x-ficon{color:var(--gold);width:22px;height:22px;flex:none;display:flex;}
+.x-ficon svg{width:22px;height:22px;}
+.x-field input{
+  flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--paper);
+  font-family:'Noto Sans JP',sans-serif;font-size:16px;padding:15px 0;color-scheme:dark;
+}
+.x-field input[type=date]{-webkit-appearance:none;appearance:none;min-height:52px;text-align:left;}
+.x-field input[type=date]::-webkit-date-and-time-value{text-align:left;}
+.x-field:focus-within{border-bottom-color:var(--gold);}
+.x-pick{width:100%;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.22);color:var(--paper);text-align:left;cursor:pointer;padding:14px 2px;font:inherit;}
+.x-pick-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;}
+.x-pick-ph{font-size:16px;color:rgba(255,255,255,.38);}
+.x-chev{color:var(--paper-dim);display:flex;}
+.x-chev svg{width:18px;height:18px;}
+.x-newlink{display:block;margin:12px 0 0 34px;}
+.x-del{margin-top:40px;width:100%;background:transparent;border:1px solid rgba(217,115,98,.5);color:#D97362;border-radius:999px;padding:14px;font-family:'Noto Sans JP',sans-serif;font-size:13px;letter-spacing:.15em;cursor:pointer;}
+.x-flab{font-size:12px;color:var(--paper-dim);letter-spacing:.12em;margin:24px 0 8px;}
+.x-imgpick{width:100%;aspect-ratio:3/2;background:var(--ink-soft);overflow:hidden;border:1px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;}
+.x-imgpick.has{border-style:solid;border-color:var(--line);}
+.x-imgpick img{width:100%;height:100%;object-fit:cover;display:block;}
+.x-imgpick-note{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:var(--paper-dim);letter-spacing:.1em;}
+.x-imgpick-note svg{width:28px;height:28px;color:var(--gold);}
+.x-submit{display:block;margin-top:34px;width:100%;border:none;border-radius:999px;cursor:pointer;background:var(--gold-grad);color:var(--ink);font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:15px;letter-spacing:.3em;padding:16px;}
+.x-submit.off{opacity:.4;}
+
+/* ---------- ARCHIVE ---------- */
+.x-title{
+  position:relative;min-height:100vh;min-height:100svh;
+  margin-top:calc(-1 * env(safe-area-inset-top));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+.x-title .back{position:absolute;left:20px;top:calc(env(safe-area-inset-top) + 12px);}
+.x-rule{width:56px;height:1px;background:rgba(255,255,255,.4);margin:28px auto;}
+.x-tagline{font-size:13px;color:var(--paper-dim);letter-spacing:.2em;margin:0;}
+.x-cnt{font-family:'Jost',sans-serif;font-size:22px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin:0 4px;}
+.x-hint{
+  position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 30px);transform:translateX(-50%);
+  background:none;border:none;color:var(--paper-dim);cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;letter-spacing:.2em;
+}
+.x-hint svg{width:22px;height:22px;}
+.x-list-hdr{padding:12px 20px 4px;max-width:560px;margin:0 auto;}
+.x-search{padding:6px 20px 0;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.x-sinput{display:flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:0 14px;background:rgba(255,255,255,.03);}
+.x-sinput:focus-within{border-color:var(--gold);}
+.x-sinput svg{width:18px;height:18px;color:var(--paper-dim);flex:none;}
+.x-sinput input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--paper);font-family:'Noto Sans JP',sans-serif;font-size:16px;padding:14px 0;}
+.x-sinput input::placeholder{color:rgba(255,255,255,.36);}
+.x-frow{display:flex;gap:10px;}
+.x-fbtn{
+  flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font:inherit;
+  border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:10px 12px 10px 14px;
+  background:rgba(255,255,255,.03);color:var(--paper);text-align:left;
+}
+.x-fbtn .fl{display:flex;flex-direction:column;min-width:0;}
+.x-fbtn .fk{font-size:13px;font-weight:700;letter-spacing:.06em;}
+.x-fbtn .fv{font-size:11px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;}
+.x-fbtn .fv.none{color:var(--paper-dim);}
+.x-fbtn > svg{width:22px;height:22px;color:var(--gold);flex:none;}
+.x-sbtn{display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:none;border-radius:999px;background:var(--paper);color:var(--ink);font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:14px;letter-spacing:.24em;padding:14px;}
+.x-sbtn svg{width:16px;height:16px;}
+.x-result{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0;max-width:560px;margin:0 auto;font-size:12px;color:var(--paper-dim);letter-spacing:.08em;}
+.x-cards{max-width:560px;margin:0 auto;padding-bottom:calc(env(safe-area-inset-bottom) + 130px);}
+/* カードは左右の余白を揃えて中央に配置 */
+.x-card{position:relative;display:block;padding:64px 36px 26px;cursor:pointer;}
+.x-card + .x-card{margin-top:34px;}
+.x-media{position:relative;}
+.x-photo{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--ink-soft);}
+.x-noimg{width:100%;aspect-ratio:3/2;border:1px dashed rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-weight:300;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.3);}
+.x-num{
+  position:absolute;left:-10px;top:-44px;pointer-events:none;
+  font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;
+  font-size:88px;line-height:1;letter-spacing:-.04em;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.22);
+}
+.x-media .x-bars{position:absolute;left:-18px;top:52px;}
+.x-cname{font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:24px;line-height:1.45;margin:20px 0 0;letter-spacing:.02em;word-break:break-word;}
+.x-cloc{font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:700;font-size:16px;margin:8px 0 0;letter-spacing:.03em;}
+.x-empty{padding:40px 24px 0;text-align:center;font-size:13px;color:var(--paper-dim);line-height:2;}
+.x-empty span{font-size:12px;color:rgba(255,255,255,.38);}
+.x-fab{
+  position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom) + 22px);z-index:20;
+  width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--gold-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.5);
+}
+.x-fab svg{width:26px;height:26px;}
+.x-fab:active{transform:scale(.94);}
+.x-d-hdr{padding:12px 20px 0;max-width:560px;margin:0 auto;}
+.x-detail .x-card{cursor:default;padding-top:58px;}
+.x-d-date{max-width:560px;margin:0 auto;padding:0 36px;font-size:12px;color:var(--paper-dim);letter-spacing:.08em;}
+.x-d-actions{display:flex;gap:12px;max-width:560px;margin:0 auto;padding:30px 36px calc(env(safe-area-inset-bottom) + 40px);}
+
+/* ---------- 選択シート・トースト ---------- */
+#x-sheet{position:fixed;inset:0;z-index:55;display:none;background:rgba(5,4,3,.72);}
+#x-sheet.open{display:block;}
+.x-sheet-box{
+  position:absolute;left:0;right:0;bottom:0;max-height:84vh;display:flex;flex-direction:column;
+  background:#17140F;border-top:1px solid var(--line);border-radius:18px 18px 0 0;
+  padding-bottom:env(safe-area-inset-bottom);max-width:600px;margin:0 auto;
+}
+.x-sheet-hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);}
+.x-sheet-hdr h3{margin:0;font-size:15px;font-weight:700;letter-spacing:.12em;}
+.x-sh-l{justify-self:start;background:none;border:none;color:var(--paper-dim);font-family:'Noto Sans JP',sans-serif;font-size:14px;cursor:pointer;padding:6px 0;}
+.x-sh-r{justify-self:end;background:none;border:none;color:var(--gold);font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:14px;cursor:pointer;padding:6px 0;}
+.x-sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:4px 18px 10px;}
+.x-grp{font-size:11px;color:var(--paper-dim);letter-spacing:.14em;margin:16px 0 8px;}
+.x-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.x-pchip{border:1px solid rgba(255,255,255,.22);border-radius:999px;background:none;color:var(--paper);padding:9px 0;font-family:'Noto Sans JP',sans-serif;font-size:13px;cursor:pointer;}
+.x-pchip.on{background:var(--gold-grad);color:var(--ink);border-color:transparent;font-weight:700;}
+.x-sopt{display:flex;align-items:center;gap:14px;width:100%;cursor:pointer;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);color:var(--paper);padding:16px 4px;font-family:'Noto Sans JP',sans-serif;font-size:15px;}
+.x-chk{margin-left:auto;color:var(--gold);opacity:0;display:flex;}
+.x-chk svg{width:20px;height:20px;}
+.x-sopt.on .x-chk,.x-sp-row.on .x-chk{opacity:1;}
+.x-sopt.on{color:var(--gold);font-weight:700;}
+.x-sheet-ft{padding:6px 18px 14px;text-align:center;}
+.x-sp-search{padding:12px 18px 6px;}
+.x-sp-row{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-bottom:1px solid var(--line);color:var(--paper);text-align:left;padding:12px 4px;cursor:pointer;font:inherit;}
+.x-sp-row.on{background:rgba(217,194,122,.1);}
+.x-sp-row .x-etext{flex:1;}
+.x-sp-empty{font-size:13px;color:var(--paper-dim);text-align:center;line-height:1.9;padding:18px 0 4px;margin:0;}
+.x-sp-new{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;cursor:pointer;
+  border:1px dashed rgba(217,194,122,.6);border-radius:12px;background:none;color:var(--gold);
+  padding:14px;font-family:'Noto Sans JP',sans-serif;font-size:13px;letter-spacing:.08em;
+}
+.x-sp-new svg{width:18px;height:18px;}
+#x-toast{
+  position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:70;
+  transform:translateX(-50%);opacity:0;transition:opacity .25s;pointer-events:none;
+  background:rgba(30,27,23,.96);border:1px solid var(--line);border-radius:999px;
+  padding:10px 18px;font-size:12px;letter-spacing:.06em;white-space:nowrap;
+}
+#x-toast.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -253,16 +520,20 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 <div id="root"></div>
 <div id="cropper"></div>
 <div id="modal"></div>
+<div id="x-sheet"></div>
+<div id="x-toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
 
 /* ============================================================
-   SAUNA AWARD — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
-   ・入力: 和名 / ローマ字 / Address / URL / 画像
-   ・永続化: IndexedDB
-   ・エクスポート: def_tier{n}.csv (n,和名,ローマ字,Address,URL)
-                  + data_tier{n}_{m}(画像)
+   SAUNA AWARD ver3.0 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
+   メニュー: DAIALY / ARCHIVE / AWARD / 設定
+   ・AWARD  : Tier1〜3に各7施設（和名 / ローマ字 / Address / URL / 画像 / ミニ写真）
+   ・DAIALY : 行ったサウナをカレンダーで記録（ARCHIVEの施設から選択）
+   ・ARCHIVE: 行ったサウナを登録・検索・一覧表示
+   ・永続化: IndexedDB "sauna-award"（全機能共通）
+   ・バックアップ: AWARD・DAIALY・ARCHIVE・背景をまとめてzipで保存／復元
    ============================================================ */
 
 const TIERS = [
@@ -273,7 +544,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "2.3";
+const APP_VER = "3.0";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -316,55 +587,6 @@ function idbDel(key){
 }
 const keyFor = (t,s)=>`t${t}s${s}`;
 
-/* ---------------- 容量の最適化（DBの作り直し） ----------------
-   IndexedDBは削除・上書き後も内部に空き領域を抱えたまま
-   ファイルサイズを維持するため、使用容量が減らない。
-   全データをメモリに退避→DBファイルを削除→書き戻すことで
-   実際の使用容量を減らす */
-function closeDB(){
-  const p = dbPromise;
-  dbPromise = null;
-  if (!p) return Promise.resolve();
-  return p.then(db=>{ try{ db.close(); }catch(e){} }).catch(()=>{});
-}
-function deleteDB(){
-  return new Promise((resolve)=>{
-    const req = indexedDB.deleteDatabase(DB_NAME);
-    req.onsuccess = ()=>resolve(true);
-    req.onerror = ()=>resolve(false);
-    req.onblocked = ()=>resolve(false);
-  });
-}
-async function rebuildDatabase(model){
-  await closeDB();
-  await deleteDB();
-  for (const t of [1,2,3]){
-    const arr = [];
-    for (let i=0;i<SLOTS;i++){
-      const e = model[t][i];
-      if (e && !isEmpty(e)){
-        await idbSet(keyFor(t,i+1), e);
-        arr.push(e);
-      } else {
-        arr.push(null);
-      }
-    }
-    cache[t] = arr;
-  }
-}
-async function snapshotAll(){
-  const model = {};
-  for (const t of [1,2,3]){
-    model[t] = cache[t] ? cache[t].slice() : await loadTier(t);
-    if (!cache[t]) cache[t] = model[t];
-  }
-  return model;
-}
-async function compactStorage(){
-  const model = await snapshotAll();
-  await rebuildDatabase(model);
-}
-
 /* 旧バージョン(title/location)のデータを新形式へ変換 */
 function normalize(e){
   if (!e) return null;
@@ -393,7 +615,7 @@ if (navigator.storage && navigator.storage.persist){
 }
 
 /* ---------------- 背景画像 ----------------
-   トップ/START/設定画面の背景。IDBのキー "bg" に保存。 */
+   トップ/AWARD/設定画面の背景。IDBのキー "bg" に保存。 */
 const BG_KEY = "bg";
 let appBg = null;
 const bgReady = idbGet(BG_KEY)
@@ -465,6 +687,9 @@ async function calcDataSize(){
       if (e) bytes += JSON.stringify(e).length;
     }
   }
+  /* DAIALY・ARCHIVE */
+  await xReady;
+  bytes += xDataSize();
   return bytes;
 }
 
@@ -476,8 +701,10 @@ async function rebuildDatabase(){
     await bgReady;
     await tierBgReady;
     await btnReady;
+    await xReady;
     const all = {};
-    let hasAny = !!appBg || btnStyle!=="default" || !!tierBgs[1] || !!tierBgs[2] || !!tierBgs[3];
+    let hasAny = !!appBg || btnStyle!=="default" || !!tierBgs[1] || !!tierBgs[2] || !!tierBgs[3]
+      || aItems.length>0 || dEntries.length>0;
     for (const T of TIERS){
       const t = T.id;
       all[t] = cache[t] || await loadTier(t);
@@ -499,6 +726,9 @@ async function rebuildDatabase(){
       if (appBg) await idbSet(BG_KEY, appBg);
       for (const t of [1,2,3]) if (tierBgs[t]) await idbSet(tierBgKey(t), tierBgs[t]);
       if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
+      /* DAIALY・ARCHIVE */
+      for (const it of aItems) await idbSet(ARC_PREFIX+it.id, it);
+      if (dEntries.length) await idbSet(DY_KEY, dPack());
     }
     for (const T of TIERS) cache[T.id] = all[T.id];
   } finally {
@@ -692,6 +922,9 @@ async function buildBackup(){
       });
     }
   }
+  /* DAIALY・ARCHIVE */
+  await xReady;
+  for (const f of xBackupFiles()) files.push(f);
   const stamp = new Date().toISOString().slice(0,10).replace(/-/g,"");
   downloadBlob(`sauna_award_backup_${stamp}.zip`, buildZip(files));
 }
@@ -745,6 +978,9 @@ async function restoreFromZip(file){
       model[Number(miniMatch[1])][Number(miniMatch[2])-1].minis[Number(miniMatch[3])-1] = bytesToDataURL(f.data, extMime(f.name));
     }
   }
+  /* DAIALY・ARCHIVE（ver3.0以降のバックアップに含まれる） */
+  const xr = xParseBackup(entries);
+  recognized += xr.count;
   if (!recognized) throw new Error("バックアップ形式のファイルが見つかりません");
   /* 既存の設定はすべて上書き。
      容量が積み上がらないよう、このアプリ専用DBを一旦削除してから
@@ -780,6 +1016,16 @@ async function restoreFromZip(file){
     }
     cache[t] = arr;
   }
+  /* DAIALY・ARCHIVE: ver3.0以降のバックアップなら上書き。
+     それ以前のバックアップ（DAIALY・ARCHIVEを含まない）の場合は現在の内容を残す */
+  await xReady;
+  if (xr.has){
+    aRevokeAll();
+    aItems = xr.items;
+    dEntries = xr.daialy;
+  }
+  for (const it of aItems) await idbSet(ARC_PREFIX+it.id, it);
+  if (dEntries.length) await idbSet(DY_KEY, dPack());
 }
 
 /* ミニ写真用: 小さめに圧縮 */
@@ -816,7 +1062,7 @@ function showBgMenu(){
   const modal = document.getElementById("modal");
   modal.innerHTML = `
     <div class="modal-box">
-      <p class="modal-msg">背景画面の設定<br><span style="font-size:12px;color:var(--paper-dim);">トップ・START・設定画面の背景を変更します</span></p>
+      <p class="modal-msg">背景画面の設定<br><span style="font-size:12px;color:var(--paper-dim);">トップ・AWARD・設定・ARCHIVE（最初の画面）の背景を変更します</span></p>
       <label class="save-btn" style="display:block;margin-bottom:12px;letter-spacing:.15em;">
         写真を選択<input class="file-input js-bgfile" type="file" accept="image/*">
       </label>
@@ -967,9 +1213,10 @@ async function confirmCrop(){
   const c = document.createElement("canvas");
   c.width = opts.outW; c.height = opts.outH;
   c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, opts.outW, opts.outH);
-  let out = c.toDataURL("image/jpeg", 0.85);
-  for (const q of [0.72, 0.6, 0.45, 0.32]){
-    if (out.length < MAX_DATAURL) break;
+  const maxLen = opts.maxLen || MAX_DATAURL;
+  let out = c.toDataURL("image/jpeg", opts.q || 0.85);
+  for (const q of (opts.steps || [0.72, 0.6, 0.45, 0.32])){
+    if (out.length < maxLen) break;
     out = c.toDataURL("image/jpeg", q);
   }
   closeCropper();
@@ -1020,9 +1267,10 @@ function homeHTML(){
       <div style="width:56px;height:1px;background:rgba(255,255,255,.4);margin:30px auto;"></div>
       <p style="font-size:13px;color:var(--paper-dim);letter-spacing:.2em;margin:0;">自分が行った、忘れがたきサウナを讃える。</p>
     </div>
-    <div style="padding:0 28px calc(15vh + env(safe-area-inset-bottom));max-width:420px;width:100%;margin:0 auto;">
-      <button class="btn" data-go="tiers">Start</button>
-      <div style="height:14px;"></div>
+    <div style="padding:0 28px calc(15vh + env(safe-area-inset-bottom));max-width:420px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;">
+      <button class="btn" data-x="open-daialy">Daialy</button>
+      <button class="btn" data-x="open-archive">Archive</button>
+      <button class="btn" data-go="tiers">Award</button>
       <button class="btn" data-go="settingsTiers" style="border-color:var(--line);color:var(--paper-dim);">設定</button>
     </div>
   </div>`;
@@ -1042,7 +1290,7 @@ function tiersHTML(isSettings){
   <div class="fade" style="min-height:100vh;display:flex;flex-direction:column;">
     <header style="padding:20px 24px 0;">
       <button class="back" data-go="home">← Top</button>
-      <p class="eyebrow" style="margin-top:18px;">${isSettings?"Settings":"Archive"}</p>
+      <p class="eyebrow" style="margin-top:18px;">${isSettings?"Settings":"Award"}</p>
       <h2 class="brand" style="font-size:clamp(24px,6.8vw,42px);margin:6px 0 0;">SAUNA AWARD</h2>
       ${isSettings?`<p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;">［設定］各Tierに 7施設まで登録できます</p>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
@@ -1603,31 +1851,1017 @@ setInterval(()=>{
   });
 }, 2000);
 
-/* ---------------- スワイプで戻る ----------------
-   画面を左から右へスワイプすると前の画面へ戻る。
-   右から左（進む）は実装しない。切り抜き・ポップアップ表示中は無効。 */
+
+/* =====================================================================
+   DAIALY / ARCHIVE（ver3.0で追加）
+   ---------------------------------------------------------------------
+   保存先: 本体と同じIndexedDB "sauna-award"（ストア "slots"）
+     ARCHIVE: キー "arc:<id>" … { id, name, pref, star(1=星あり/0=星なし), img, at }
+              img は JPEG のバイナリ(ArrayBuffer)。base64文字列より約25%小さい
+     DAIALY : キー "daialy"   … [{ id, date, sid }]（sid = ARCHIVEのid）
+              施設名・地域・写真はARCHIVE側にだけ持ち、重複して保存しない。
+              ARCHIVEから削除された施設の記録だけ { id, date, name, loc } で控えを持つ
+   削除や画像の差し替え時は rebuildDatabase() でDBを作り直し、実際の容量を戻す
+   ===================================================================== */
+const PREFS = [
+  ["北海道・東北", ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県"]],
+  ["関東",        ["茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県"]],
+  ["中部",        ["新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県"]],
+  ["近畿",        ["三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県"]],
+  ["中国",        ["鳥取県","島根県","岡山県","広島県","山口県"]],
+  ["四国",        ["徳島県","香川県","愛媛県","高知県"]],
+  ["九州・沖縄",   ["福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"]],
+];
+const PREF_ORDER = PREFS.reduce((a,g)=>a.concat(g[1]), []);
+const shortPref = (p)=>!p ? "" : (p==="北海道" ? p : p.replace(/[都府県]$/,""));
+const STAR_OPTS = [1,0];
+const starLabel = (n)=>n>0 ? "星あり" : "星なし";
+const WD = ["日","月","火","水","木","金","土"];
+const ymd = (d)=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const parseYmd = (s)=>{ const p = s.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); };
+const fmtMD = (s)=>{ const d = parseYmd(s); return `${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`; };
+const fmtDate = (t)=>{ const d = new Date(t); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`; };
+const norm = (s)=>String(s||"").normalize("NFKC").toLowerCase()
+  .replace(/[\u30a1-\u30f6]/g,(c)=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s+/g,"");
+const xNewId = ()=>Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+const XI = {
+  cal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>`,
+  list:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  plusc:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`,
+  pin:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s-6-5.3-6-10.5a6 6 0 0 1 12 0C18 15.7 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></svg>`,
+  sauna:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5c-1.4 1.4 1.4 2.8 0 4.2s0 2.8 0 2.8M12 3c-1.4 1.4 1.4 2.8 0 4.2s0 2.8 0 2.8M16 3.5c-1.4 1.4 1.4 2.8 0 4.2s0 2.8 0 2.8"/><path d="M4 14h16v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>`,
+  left:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`,
+  right:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>`,
+  image:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  down:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`,
+};
+/* 星ありは金のバー3本、星なしは枠のみ3本 */
+const barsHTML = (n, cls)=>`<span class="x-bars ${cls||""}" aria-label="${starLabel(n)}">${`<i class="${n>0?"on":""}"></i>`.repeat(3)}</span>`;
+
+/* ---------------- 日本の祝日（振替休日・国民の休日を含む） ---------------- */
+const holCache = {};
+function holidaysOf(y){
+  if (holCache[y]) return holCache[y];
+  const h = {};
+  const add = (m,d,name)=>{ h[`${y}-${pad2(m)}-${pad2(d)}`] = name; };
+  const nthMon = (m,n)=>{ const first = new Date(y,m-1,1).getDay(); return 1 + ((8-first)%7) + (n-1)*7; };
+  const e = y - 1980;
+  add(1,1,"元日");
+  add(1,nthMon(1,2),"成人の日");
+  add(2,11,"建国記念の日");
+  if (y>=2020) add(2,23,"天皇誕生日");
+  add(3,Math.floor(20.8431 + 0.242194*e - Math.floor(e/4)),"春分の日");
+  add(4,29,"昭和の日");
+  add(5,3,"憲法記念日"); add(5,4,"みどりの日"); add(5,5,"こどもの日");
+  if (y===2020){ add(7,23,"海の日"); add(7,24,"スポーツの日"); add(8,10,"山の日"); }
+  else if (y===2021){ add(7,22,"海の日"); add(7,23,"スポーツの日"); add(8,8,"山の日"); }
+  else {
+    add(7,nthMon(7,3),"海の日");
+    if (y>=2016) add(8,11,"山の日");
+    add(10,nthMon(10,2), y>=2020 ? "スポーツの日" : "体育の日");
+  }
+  add(9,nthMon(9,3),"敬老の日");
+  add(9,Math.floor(23.2488 + 0.242194*e - Math.floor(e/4)),"秋分の日");
+  add(11,3,"文化の日");
+  add(11,23,"勤労感謝の日");
+  if (y<=2018) add(12,23,"天皇誕生日");
+  if (y===2019){ add(5,1,"天皇の即位の日"); add(10,22,"即位礼正殿の儀"); }
+  for (const k of Object.keys(h).sort()){
+    const d = parseYmd(k);
+    const n1 = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
+    const n2 = new Date(d.getFullYear(), d.getMonth(), d.getDate()+2);
+    if (!h[ymd(n1)] && h[ymd(n2)] && n1.getDay()!==0) h[ymd(n1)] = "国民の休日";
+  }
+  for (const k of Object.keys(h).sort()){
+    const d = parseYmd(k);
+    if (d.getDay()!==0) continue;
+    const n = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
+    while (h[ymd(n)]) n.setDate(n.getDate()+1);
+    if (n.getFullYear()===y) h[ymd(n)] = "振替休日";
+  }
+  return (holCache[y] = h);
+}
+const holidayName = (ds)=>holidaysOf(Number(ds.slice(0,4)))[ds] || "";
+
+/* ---------------- 保存 ---------------- */
+const ARC_PREFIX = "arc:";
+const DY_KEY = "daialy";
+let aItems = [];      /* ARCHIVE（登録順） */
+let dEntries = [];    /* DAIALY */
+let xLoaded = false;
+
+function idbGetPrefix(prefix){
+  return openDB().then((db)=>new Promise((res,rej)=>{
+    const q = db.transaction(STORE,"readonly").objectStore(STORE).getAll(IDBKeyRange.bound(prefix, prefix+"\uffff"));
+    q.onsuccess = ()=>res(q.result || []);
+    q.onerror = ()=>rej(q.error);
+  }));
+}
+/* DAIALYは必要最小限の項目だけを保存 */
+function dPack(){
+  return dEntries.map((e)=>e.sid ? { id:e.id, date:e.date, sid:e.sid } : { id:e.id, date:e.date, name:e.name||"", loc:e.loc||"" });
+}
+async function dSave(){
+  try{
+    if (dEntries.length) await idbSet(DY_KEY, dPack());
+    else await idbDel(DY_KEY);       /* 0件ならキーごと削除 */
+    return true;
+  }catch(e){ storageOK = false; showBanner(); return false; }
+}
+/* 画像の表示用URL（バイナリから作成し、使い回す） */
+const aUrls = new Map();
+function aImgURL(it){
+  if (!it || !it.img) return "";
+  const c = aUrls.get(it.id);
+  if (c && c.buf===it.img) return c.url;
+  if (c) URL.revokeObjectURL(c.url);
+  const url = URL.createObjectURL(new Blob([it.img], { type:"image/jpeg" }));
+  aUrls.set(it.id, { buf:it.img, url });
+  return url;
+}
+function aRevoke(id){ const c = aUrls.get(id); if (c){ URL.revokeObjectURL(c.url); aUrls.delete(id); } }
+function aRevokeAll(){ for (const id of Array.from(aUrls.keys())) aRevoke(id); }
+
+/* 登録データ容量（DAIALY・ARCHIVE分） */
+function xDataSize(){
+  let bytes = 0;
+  for (const it of aItems){
+    bytes += (it.img ? it.img.byteLength : 0);
+    bytes += JSON.stringify({ id:it.id, name:it.name, pref:it.pref, star:it.star, at:it.at }).length;
+  }
+  if (dEntries.length) bytes += JSON.stringify(dPack()).length;
+  return bytes;
+}
+
+/* バックアップ用ファイル
+   archive.csv : id,施設名,都道府県,星(1/0),登録日時
+   archive_<id>.jpg : 画像
+   daialy.csv  : id,日付,ARCHIVEのid,施設名,地域（施設名・地域はARCHIVE未登録の記録のみ） */
+function xBackupFiles(){
+  const enc = new TextEncoder();
+  const files = [];
+  let acsv = "";
+  for (const it of aItems){
+    acsv += `${it.id},${csvSafe(it.name)},${it.pref||""},${it.star?1:0},${it.at||0}\n`;
+    if (it.img) files.push({ name:`archive_${it.id}.jpg`, data:new Uint8Array(it.img) });
+  }
+  let dcsv = "";
+  for (const e of dEntries){
+    dcsv += e.sid ? `${e.id},${e.date},${e.sid},,\n` : `${e.id},${e.date},,${csvSafe(e.name)},${csvSafe(e.loc)}\n`;
+  }
+  files.unshift({ name:"archive.csv", data:enc.encode(acsv) });
+  files.push({ name:"daialy.csv", data:enc.encode(dcsv) });
+  return files;
+}
+function xParseBackup(entries){
+  const out = { has:false, items:[], daialy:[], count:0 };
+  const imgs = {};
+  const dec = new TextDecoder();
+  for (const f of entries){
+    if (f.name==="archive.csv"){
+      out.has = true; out.count++;
+      for (const line of dec.decode(f.data).split(/\r?\n/)){
+        const p = line.split(",");
+        if (!p[0] || !p[1] || !p[1].trim()) continue;
+        const pref = (p[2]||"").trim();
+        out.items.push({ id:p[0].trim(), name:p[1].trim().slice(0,30), pref:PREF_ORDER.includes(pref) ? pref : "",
+                         star:Number(p[3])>0 ? 1 : 0, img:null, at:Number(p[4])||Date.now() });
+      }
+    } else if (f.name==="daialy.csv"){
+      out.count++;
+      for (const line of dec.decode(f.data).split(/\r?\n/)){
+        const p = line.split(",");
+        if (!p[0] || !/^\d{4}-\d{2}-\d{2}$/.test((p[1]||"").trim())) continue;
+        const sid = (p[2]||"").trim();
+        out.daialy.push(sid ? { id:p[0].trim(), date:p[1].trim(), sid }
+                            : { id:p[0].trim(), date:p[1].trim(), name:(p[3]||"").trim(), loc:(p[4]||"").trim() });
+      }
+    } else {
+      const m = f.name.match(/^archive_([a-z0-9]+)\.(jpe?g|png)$/i);
+      if (m){ out.count++; imgs[m[1]] = f.data.slice().buffer; }
+    }
+  }
+  for (const it of out.items) it.img = imgs[it.id] || null;
+  out.items.sort((a,b)=>a.at-b.at);
+  const ids = new Set(out.items.map((x)=>x.id));
+  out.daialy = out.daialy.filter((e)=>!e.sid || ids.has(e.sid) || e.name);
+  return out;
+}
+
+/* プロトタイプ（daialy.html / list.html / daialy-list.html）のデータを一度だけ引き継ぐ。
+   正式版にDAIALY・ARCHIVEのデータがまだ無い場合のみ実行し、
+   引き継ぎ後はプロトタイプ側の保存領域を削除して容量の二重化を防ぐ */
+async function migrateFromPrototype(){
+  const P_DB = "sauna-award-list-proto", P_KEY = "sauna-award:daialy-proto:v1";
+  if (aItems.length || dEntries.length) return false;
+  let hasDB = false, pItems = [], pDaialy = [];
+  try{
+    if (indexedDB.databases){
+      const dbs = await indexedDB.databases();
+      hasDB = dbs.some((d)=>d.name===P_DB);
+    }
+  }catch(e){}
+  if (hasDB){
+    pItems = await new Promise((res)=>{
+      try{
+        const r = indexedDB.open(P_DB);
+        r.onupgradeneeded = ()=>{ try{ r.transaction.abort(); }catch(e){} };
+        r.onerror = ()=>res([]);
+        r.onsuccess = ()=>{
+          const db = r.result;
+          try{
+            const q = db.transaction("items","readonly").objectStore("items").getAll();
+            q.onsuccess = ()=>{ db.close(); res(q.result || []); };
+            q.onerror = ()=>{ db.close(); res([]); };
+          }catch(e){ db.close(); res([]); }
+        };
+      }catch(e){ res([]); }
+    });
+  }
+  try{ const raw = localStorage.getItem(P_KEY); if (raw){ const a = JSON.parse(raw); if (Array.isArray(a)) pDaialy = a; } }catch(e){}
+  if (!pItems.length && !pDaialy.length){
+    if (hasDB){ try{ indexedDB.deleteDatabase(P_DB); }catch(e){} }
+    return false;
+  }
+  const items = pItems.filter((it)=>it && it.id && it.name).map((it)=>({
+    id:it.id, name:String(it.name).slice(0,30), pref:PREF_ORDER.includes(it.pref) ? it.pref : "",
+    star:it.stars>0 ? 1 : 0,
+    img:(typeof it.image==="string" && it.image.startsWith("data:")) ? dataURLtoBytes(it.image).buffer : null,
+    at:it.createdAt || Date.now(),
+  })).sort((a,b)=>a.at-b.at);
+  const ids = new Set(items.map((x)=>x.id));
+  const entries = pDaialy.filter((e)=>e && e.id && e.date).map((e)=>(e.saunaId && ids.has(e.saunaId))
+    ? { id:e.id, date:e.date, sid:e.saunaId }
+    : { id:e.id, date:e.date, name:e.name||"", loc:e.location||"" });
+  try{
+    for (const it of items) await idbSet(ARC_PREFIX+it.id, it);
+    aItems = items; dEntries = entries;
+    if (!(await dSave())) throw new Error("save");
+  }catch(e){ return false; }
+  try{ if (hasDB) indexedDB.deleteDatabase(P_DB); }catch(e){}
+  try{ localStorage.removeItem(P_KEY); }catch(e){}
+  return true;
+}
+
+const xReady = (async ()=>{
+  let migrated = false;
+  try{
+    const arr = await idbGetPrefix(ARC_PREFIX);
+    aItems = arr.filter((it)=>it && it.id && it.name).sort((a,b)=>a.at-b.at);
+    const d = await idbGet(DY_KEY);
+    dEntries = Array.isArray(d) ? d.filter((e)=>e && e.id && e.date) : [];
+  }catch(e){}
+  try{ migrated = await migrateFromPrototype(); }catch(e){}
+  xLoaded = true;
+  if (xIsView(view)) xRerenderKeep();
+  if (migrated) xToast("プロトタイプのDAIALY・ARCHIVEを引き継ぎました");
+})();
+
+/* ---------------- 状態 ---------------- */
+const X_VIEWS = ["daialy","dreg","archive","adetail","areg"];
+function xIsView(v){ return X_VIEWS.indexOf(v) >= 0; }
+const xToday0 = new Date();
+const xs = {
+  mode:"cal", y:xToday0.getFullYear(), m:xToday0.getMonth(), sel:ymd(xToday0), slide:null,
+  dEditId:null, dDraft:null, dY:0,
+  detailId:null, aEditId:null, aOrigin:"archive", aY:0,
+};
+let aDraft = null;                          /* { name, pref, star, img, preview } */
+let aSearch = { q:"", prefs:[], star:[] };  /* 入力中の条件 */
+let aApplied = null;                        /* 検索ボタンで確定した条件 */
+let xPicker = null;
+let xBusy = false;
+let xLastKey = "";
+const xSheet = document.getElementById("x-sheet");
+
+function aOf(id){ return id ? (aItems.find((x)=>x.id===id) || null) : null; }
+function dInfo(e){
+  const s = aOf(e.sid);
+  if (s) return { name:s.name, loc:shortPref(s.pref), img:aImgURL(s) };
+  return { name:e.name || "（施設名なし）", loc:e.loc || "", img:"" };
+}
+
+/* ================================================================
+   DAIALY 画面
+   ================================================================ */
+function dHeaderHTML(){
+  return `
+  <header class="x-hdr">
+    <div class="x-hdr-top">
+      <button class="back" data-go="home">← Top</button>
+      <span class="eyebrow">Daialy</span>
+    </div>
+    <div class="x-hdr-main">
+      <div class="x-mnav">
+        <button class="x-arrow" data-x="d-prev" aria-label="前の月">${XI.left}</button>
+        <h2 class="x-month"><span class="x-my">${xs.y}</span><span class="x-mj">年</span><span class="x-mm">${xs.m+1}</span><span class="x-mj">月</span></h2>
+        <button class="x-arrow" data-x="d-next" aria-label="次の月">${XI.right}</button>
+      </div>
+      <button class="x-today" data-x="d-today" aria-label="今日に戻る">TODAY</button>
+    </div>
+  </header>`;
+}
+function dEntryInner(e){
+  const s = dInfo(e);
+  return `${s.img ? `<img class="x-thumb" src="${s.img}" alt="">` : `<span class="x-bar"></span>`}
+    <span class="x-etext">
+      <span class="x-nm">${esc(s.name)}</span>
+      ${s.loc ? `<span class="x-lc">${XI.pin}${esc(s.loc)}</span>` : ""}
+    </span>`;
+}
+function dGroup(){
+  const map = {};
+  for (const e of dEntries){ (map[e.date] = map[e.date] || []).push(e); }
+  for (const k in map) map[k].sort((a,b)=>a.id<b.id ? -1 : 1);
+  return map;
+}
+function dCalHTML(){
+  const y = xs.y, m = xs.m;
+  const startWd = new Date(y,m,1).getDay();
+  const days = new Date(y,m+1,0).getDate();
+  const map = dGroup();
+  const todayStr = ymd(new Date());
+  const cells = [];
+  for (let i=0;i<startWd;i++) cells.push(`<div class="x-cell blank"></div>`);
+  for (let d=1; d<=days; d++){
+    const ds = `${y}-${pad2(m+1)}-${pad2(d)}`;
+    const wd = (startWd + d - 1) % 7;
+    const list = map[ds] || [];
+    const hol = holidayName(ds);
+    const chips = list.slice(0,2).map((e)=>`<span class="x-chip">${esc(dInfo(e).name)}</span>`).join("")
+      + (list.length>2 ? `<span class="x-more">+${list.length-2}</span>` : "");
+    const cls = ["x-cell","wd"+wd, hol?"hol":"", ds===xs.sel?"sel":"", ds===todayStr?"today":""].join(" ");
+    cells.push(`<button class="${cls}" data-x="d-select" data-date="${ds}" aria-label="${m+1}月${d}日${hol?`、${hol}`:""}${list.length?`、記録${list.length}件`:""}"><span class="x-dnum">${d}</span>${hol?`<span class="x-hname">${hol}</span>`:""}${chips}</button>`);
+  }
+  while (cells.length % 7) cells.push(`<div class="x-cell blank"></div>`);
+  const selList = map[xs.sel] || [];
+  const selHol = holidayName(xs.sel);
+  return `
+  <section class="x-cal">
+    <div class="x-wdrow">${WD.map((w,i)=>`<span class="wd${i}">${w}</span>`).join("")}</div>
+    <div class="x-grid">${cells.join("")}</div>
+  </section>
+  <section class="x-daysec">
+    <h3 class="x-daysec-h">${fmtMD(xs.sel)}${selHol?`<span class="x-htag">${selHol}</span>`:""}${xs.sel===todayStr?`<span class="x-tag">TODAY</span>`:""}</h3>
+    ${selList.map((e)=>`<button class="x-entry" data-x="d-open" data-id="${esc(e.id)}">${dEntryInner(e)}</button>`).join("")}
+  </section>`;
+}
+function dListHTML(){
+  const y = xs.y, m = xs.m;
+  const startWd = new Date(y,m,1).getDay();
+  const days = new Date(y,m+1,0).getDate();
+  const map = dGroup();
+  const todayStr = ymd(new Date());
+  let rows = "";
+  for (let d=1; d<=days; d++){
+    const ds = `${y}-${pad2(m+1)}-${pad2(d)}`;
+    const wd = (startWd + d - 1) % 7;
+    const hol = holidayName(ds);
+    const ents = (map[ds] || []).map((e)=>`<button class="x-lent" data-x="d-open" data-id="${esc(e.id)}">${dEntryInner(e)}</button>`).join("");
+    rows += `
+    <div class="x-lrow ${ds===xs.sel?"sel":""}" id="x-row-${ds}" data-x="d-select" data-date="${ds}">
+      <div class="x-lday wd${wd} ${hol?"hol":""} ${ds===todayStr?"today":""}"><span class="x-ldnum">${d}</span><span class="x-lwd">${WD[wd]}</span></div>
+      <div class="x-lents">${hol?`<span class="x-lhol">${hol}</span>`:""}${ents}</div>
+    </div>`;
+  }
+  return `<section>${rows}</section>`;
+}
+function dBarHTML(){
+  return `
+  <nav class="x-bbar">
+    <button class="x-tab ${xs.mode==="cal"?"on":""}" data-x="d-mode-cal" aria-label="月表示">${XI.cal}<span>MONTH</span></button>
+    <button class="x-tab ${xs.mode==="list"?"on":""}" data-x="d-mode-list" aria-label="リスト表示">${XI.list}<span>LIST</span></button>
+    <button class="x-plus" data-x="d-add" aria-label="サウナを登録">${XI.plus}</button>
+  </nav>`;
+}
+function dRegHTML(){
+  const dd = xs.dDraft;
+  const edit = !!xs.dEditId;
+  const s = aOf(dd.sid);
+  const ready = !!s || !!dd.name;
+  let sel;
+  if (s){
+    const u = aImgURL(s);
+    sel = `${u ? `<img class="x-thumb" src="${u}" alt="">` : `<span class="x-thumb ph">${XI.sauna}</span>`}
+      <span class="x-etext"><span class="x-nm">${esc(s.name)}</span>${s.pref?`<span class="x-lc">${XI.pin}${esc(shortPref(s.pref))}</span>`:""}</span>`;
+  } else if (dd.name){
+    sel = `<span class="x-etext"><span class="x-nm">${esc(dd.name)}</span><span class="x-lc x-warn">ARCHIVEにない記録です。タップするとARCHIVEから選び直せます</span></span>`;
+  } else {
+    sel = `<span class="x-pick-ph">サウナを選択</span>`;
+  }
+  return `
+  <div class="x-reg">
+    <header class="x-reg-hdr">
+      <button class="x-reg-cancel" data-x="d-cancel">キャンセル</button>
+      <h2 class="x-reg-title">SETTING</h2>
+      <button class="x-reg-ok ${ready?"":"off"}" data-x="d-submit">決定</button>
+    </header>
+    <div class="x-reg-body">
+      <label class="x-field"><span class="x-ficon">${XI.cal}</span>
+        <input id="x-date" type="date" value="${dd.date}" aria-label="行った日">
+      </label>
+      <button class="x-field x-pick" data-x="d-pick" aria-label="ARCHIVEからサウナを選択">
+        <span class="x-ficon">${XI.sauna}</span>
+        <span class="x-pick-main">${sel}</span>
+        <span class="x-chev">${XI.right}</span>
+      </button>
+      <button class="x-link x-newlink" data-x="d-new">ARCHIVEにないサウナを登録する</button>
+      ${edit ? `<button class="x-del" data-x="d-delete">この記録を削除</button>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ================================================================
+   ARCHIVE 画面
+   ================================================================ */
+function aMatches(it, f){
+  if (f.q && !norm(it.name).includes(norm(f.q))) return false;
+  if (f.prefs.length && !f.prefs.includes(it.pref)) return false;
+  if (f.star.length && !f.star.includes(it.star>0 ? 1 : 0)) return false;
+  return true;
+}
+function aPrefSummary(arr, emptyText){
+  if (!arr.length) return emptyText;
+  return arr.length>1 ? `${shortPref(arr[0])} 他${arr.length-1}` : shortPref(arr[0]);
+}
+function xFbtn(key, val, isNone, act){
+  return `<button class="x-fbtn" data-x="${act}">
+    <span class="fl"><span class="fk">${key}</span><span class="fv ${isNone?"none":""}">${esc(val)}</span></span>${XI.plusc}
+  </button>`;
+}
+function aCardHTML(it, n, isStatic){
+  const u = aImgURL(it);
+  return `
+  <article class="x-card" id="x-card-${esc(it.id)}" ${isStatic?"":`data-x="a-detail" data-id="${esc(it.id)}"`}>
+    <div class="x-media">
+      ${u ? `<img class="x-photo" src="${u}" alt="${esc(it.name)}" decoding="async">` : `<div class="x-noimg">NO IMAGE</div>`}
+      <span class="x-num">${n}</span>
+      ${barsHTML(it.star)}
+    </div>
+    <h3 class="x-cname">${esc(it.name)}</h3>
+    ${it.pref ? `<p class="x-cloc">@${esc(shortPref(it.pref))}</p>` : ""}
+  </article>`;
+}
+function aPageHTML(){
+  const count = aItems.length;
+  const hits = aApplied ? aItems.filter((it)=>aMatches(it, aApplied)) : aItems;
+  let cards;
+  if (!count) cards = `<p class="x-empty">まだ登録がありません<br><span>右下の ＋ から行ったサウナを登録できます</span></p>`;
+  else if (!hits.length) cards = `<p class="x-empty">条件に合うサウナが見つかりませんでした<br><span>条件を変えるか、クリアして全件を表示してください</span></p>`;
+  else cards = hits.map((it)=>aCardHTML(it, aItems.indexOf(it)+1, false)).join("");
+  /* 最初の画面は「背景画面の設定」の画像を背景にする（検索窓より下は黒） */
+  const bg = appBg ? ` style="background-image:linear-gradient(rgba(5,4,3,.6),rgba(5,4,3,.6)),url('${appBg}');"` : "";
+  return `
+  <section class="x-title"${bg}>
+    <button class="back" data-go="home">← Top</button>
+    <h1 class="brand" style="font-size:clamp(38px,10.5vw,80px);margin:0;">SAUNA<br>ARCHIVE</h1>
+    <div class="x-rule"></div>
+    <p class="x-tagline">${count ? `巡ったサウナ<span class="x-cnt">${count}</span>施設` : "まだ登録がありません"}</p>
+    <button class="x-hint" data-x="a-to-list" aria-label="一覧へ移動">一覧へ${XI.down}</button>
+  </section>
+  <section id="x-listsec">
+    <div class="x-list-hdr"><button class="back" data-go="home">← Top</button></div>
+    <div class="x-search">
+      <label class="x-sinput">${XI.search}
+        <input id="x-sq" type="text" enterkeyhint="search" placeholder="サウナ施設名" value="${esc(aSearch.q)}" autocomplete="off">
+      </label>
+      <div class="x-frow">
+        ${xFbtn("地域", aPrefSummary(aSearch.prefs, "すべて"), !aSearch.prefs.length, "pk-pref-search")}
+        ${xFbtn("条件", aSearch.star.length ? starLabel(aSearch.star[0]) : "星を選択", !aSearch.star.length, "pk-star-search")}
+      </div>
+      <button class="x-sbtn" data-x="a-search">${XI.search}検索</button>
+    </div>
+    <div class="x-result">
+      <span>${aApplied ? `${hits.length}件ヒット` : `全${count}施設`}</span>
+      ${aApplied ? `<button class="x-link" data-x="a-clear-search">条件をクリア</button>` : ""}
+    </div>
+    <div class="x-cards">${cards}</div>
+  </section>`;
+}
+function aDetailHTML(){
+  const it = aOf(xs.detailId);
+  if (!it) return "";
+  return `
+  <div class="x-detail">
+    <header class="x-d-hdr"><button class="back" data-x="a-back">← 戻る</button></header>
+    ${aCardHTML(it, aItems.indexOf(it)+1, true)}
+    <p class="x-d-date">${fmtDate(it.at)} 登録</p>
+    <div class="x-d-actions">
+      <button class="btn" data-x="a-edit">編集</button>
+      <button class="btn x-danger" data-x="a-delete">削除</button>
+    </div>
+  </div>`;
+}
+function aRegHTML(){
+  const fromDaialy = xs.aOrigin==="dreg";
+  const d = aDraft;
+  return `
+  <div class="x-reg">
+    <header class="x-reg-hdr">
+      <button class="x-reg-cancel" data-x="a-cancel">キャンセル</button>
+      <h2 class="x-reg-title">ARCHIVE SETTING</h2>
+      <span></span>
+    </header>
+    <div class="x-reg-body">
+      ${fromDaialy ? `<p class="x-reg-note">登録すると、DAIALYの登録画面に戻ってこのサウナが選ばれます</p>` : ""}
+      <p class="x-flab">サウナ施設名</p>
+      <label class="x-sinput">
+        <input id="x-aname" type="text" maxlength="30" placeholder="例：らかんの湯" value="${esc(d.name)}" autocomplete="off">
+      </label>
+      <div class="x-frow" style="margin-top:14px;">
+        ${xFbtn("地域", d.pref ? shortPref(d.pref) : "未選択", !d.pref, "pk-pref-draft")}
+        ${xFbtn("星", starLabel(d.star), false, "pk-star-draft")}
+      </div>
+      <p class="x-flab">画像</p>
+      <label class="file-label">
+        <input id="x-aimg" class="file-input" type="file" accept="image/*" aria-label="画像を選択">
+        <span class="x-imgpick ${d.preview?"has":""}">
+          ${d.preview ? `<img src="${d.preview}" alt="">` : `<span class="x-imgpick-note">${XI.image}<span>タップして写真を選択</span></span>`}
+        </span>
+      </label>
+      ${d.preview ? `<button class="x-link" data-x="a-img-clear">画像を削除</button>` : ""}
+      <button class="x-submit ${d.name.trim()?"":"off"}" id="x-asubmit" data-x="a-submit">${xs.aEditId?"保存":"登録"}</button>
+    </div>
+  </div>`;
+}
+
+/* ================================================================
+   描画（本体のrender()から呼ばれる）
+   ================================================================ */
+function xRender(){
+  const key = view + (view==="daialy" ? ":"+xs.mode : "");
+  const anim = key!==xLastKey ? "x-fade" : "";
+  xLastKey = key;
+  if (!xLoaded){
+    return `<div class="x-fade" style="min-height:80vh;display:flex;align-items:center;justify-content:center;"><span class="eyebrow">Loading…</span></div>`;
+  }
+  if (view==="daialy"){
+    /* 固定バーはアニメーション要素の外に置く。月切り替え時はスライド */
+    const cls = xs.slide ? (xs.slide==="next" ? "x-slide-next" : "x-slide-prev") : anim;
+    xs.slide = null;
+    return `${dHeaderHTML()}<main class="x-content ${cls}">${xs.mode==="cal"?dCalHTML():dListHTML()}</main>${dBarHTML()}`;
+  }
+  let html = "";
+  if (view==="dreg") html = dRegHTML();
+  else if (view==="archive") html = aPageHTML();
+  else if (view==="adetail") html = aDetailHTML();
+  else if (view==="areg") html = aRegHTML();
+  return `<div class="${anim}">${html}</div>`
+    + (view==="archive" ? `<button class="x-fab" data-x="a-add" aria-label="サウナを登録">${XI.plus}</button>` : "");
+}
+function xRerenderKeep(){ const y = window.scrollY; render(); window.scrollTo(0,y); }
+function xShow(v, y){ view = v; render(); window.scrollTo(0, y||0); }
+
+/* ================================================================
+   選択シート（地域・星・サウナ）
+   ================================================================ */
+function xOpenSheet(inner){ xSheet.innerHTML = `<div class="x-sheet-box">${inner}</div>`; xSheet.classList.add("open"); }
+function xCloseSheet(){ xSheet.classList.remove("open"); xSheet.innerHTML = ""; xPicker = null; }
+function xOpenPicker(kind, target){
+  const multi = kind==="pref" && target==="search";   /* 地域の検索のみ複数選択 */
+  let sel;
+  if (kind==="pref") sel = new Set(target==="search" ? aSearch.prefs : (aDraft.pref ? [aDraft.pref] : []));
+  else sel = new Set(target==="search" ? aSearch.star : [aDraft.star]);
+  xPicker = { kind, multi, target, sel };
+  let body, title, foot;
+  if (kind==="pref"){
+    title = "地域を選択";
+    body = PREFS.map(([g,list])=>`
+      <p class="x-grp">${g}</p>
+      <div class="x-chips">${list.map((p)=>`<button class="x-pchip ${sel.has(p)?"on":""}" data-x="pk-pref" data-pref="${p}">${shortPref(p)}</button>`).join("")}</div>`).join("");
+    foot = multi ? `<button class="x-link" data-x="pk-clear">選択をすべて外す</button>`
+                 : `<button class="x-link" data-x="pk-none">地域を設定しない</button>`;
+  } else {
+    title = target==="search" ? "星の有無で絞り込む" : "星を選択";
+    body = STAR_OPTS.map((n)=>`
+      <button class="x-sopt ${sel.has(n)?"on":""}" data-x="pk-star" data-star="${n}">
+        ${barsHTML(n,"mini")}<span>${starLabel(n)}</span><span class="x-chk">${XI.check}</span>
+      </button>`).join("");
+    foot = target==="search" ? `<button class="x-link" data-x="pk-none">指定しない</button>` : "";
+  }
+  xOpenSheet(`
+    <div class="x-sheet-hdr">
+      <button class="x-sh-l" data-x="pk-cancel">キャンセル</button>
+      <h3>${title}</h3>
+      ${multi ? `<button class="x-sh-r" data-x="pk-ok">決定</button>` : `<span></span>`}
+    </div>
+    <div class="x-sheet-body">${body}</div>
+    ${foot ? `<div class="x-sheet-ft">${foot}</div>` : ""}`);
+}
+function xCommitPicker(){
+  const p = xPicker;
+  if (!p) return;
+  const vals = Array.from(p.sel);
+  if (p.target==="search"){
+    if (p.kind==="pref") aSearch.prefs = vals.sort((a,b)=>PREF_ORDER.indexOf(a)-PREF_ORDER.indexOf(b));
+    else aSearch.star = vals.slice(0,1);
+  } else {
+    if (p.kind==="pref") aDraft.pref = vals[0] || "";
+    else aDraft.star = vals.length ? vals[0] : 0;
+  }
+  xCloseSheet();
+  xRerenderKeep();
+}
+/* DAIALY用: ARCHIVEのサウナを選ぶシート */
+function xOpenSaunaPicker(){
+  xPicker = { kind:"sauna" };
+  xOpenSheet(`
+    <div class="x-sheet-hdr">
+      <button class="x-sh-l" data-x="pk-cancel">キャンセル</button>
+      <h3>ARCHIVEから選択</h3>
+      <span></span>
+    </div>
+    <div class="x-sp-search">
+      <label class="x-sinput">${XI.search}
+        <input id="x-spq" type="text" enterkeyhint="search" placeholder="サウナ施設名で絞り込む" autocomplete="off">
+      </label>
+    </div>
+    <div class="x-sheet-body" id="x-splist"></div>
+    <div class="x-sheet-ft"><button class="x-sp-new" data-x="sp-new">${XI.plusc}ARCHIVEにないサウナを登録する</button></div>`);
+  xRefreshSaunaList();
+}
+function xRefreshSaunaList(){
+  const box = document.getElementById("x-splist");
+  if (!box) return;
+  const qEl = document.getElementById("x-spq");
+  const q = qEl ? qEl.value.trim() : "";
+  if (!aItems.length){ box.innerHTML = `<p class="x-sp-empty">ARCHIVEにまだサウナがありません<br>下のボタンから登録できます</p>`; return; }
+  const hits = q ? aItems.filter((it)=>norm(it.name).includes(norm(q))) : aItems;
+  if (!hits.length){ box.innerHTML = `<p class="x-sp-empty">「${esc(q)}」はARCHIVEにありません<br>下のボタンから登録できます</p>`; return; }
+  const cur = xs.dDraft && xs.dDraft.sid;
+  box.innerHTML = hits.map((it)=>{
+    const u = aImgURL(it);
+    return `
+    <button class="x-sp-row ${it.id===cur?"on":""}" data-x="sp-pick" data-id="${esc(it.id)}">
+      ${u ? `<img class="x-thumb" src="${u}" alt="">` : `<span class="x-thumb ph">${XI.sauna}</span>`}
+      <span class="x-etext">
+        <span class="x-nm">${esc(it.name)}</span>
+        ${it.pref ? `<span class="x-lc">${XI.pin}${esc(shortPref(it.pref))}</span>` : ""}
+      </span>
+      ${barsHTML(it.star,"mini")}
+      <span class="x-chk">${XI.check}</span>
+    </button>`;
+  }).join("");
+}
+
+function xToast(msg){
+  const t = document.getElementById("x-toast");
+  if (!t) return;
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(xToast._t); xToast._t = setTimeout(()=>t.classList.remove("show"), 2100);
+}
+
+/* ================================================================
+   DAIALY の操作
+   ================================================================ */
+function dSetMonth(y, m){
+  const d = new Date(y, m, 1);
+  xs.y = d.getFullYear(); xs.m = d.getMonth();
+  const t = new Date();
+  xs.sel = (t.getFullYear()===xs.y && t.getMonth()===xs.m) ? ymd(t) : ymd(d);
+}
+/* 月を切り替える（矢印・スワイプ共通） */
+function dChangeMonth(delta){
+  dSetMonth(xs.y, xs.m + delta);
+  xs.slide = delta > 0 ? "next" : "prev";
+  render();
+  window.scrollTo(0,0);
+}
+function dScrollToSel(smooth){
+  const el = document.getElementById("x-row-"+xs.sel);
+  const hdr = document.querySelector(".x-hdr");
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - (hdr ? hdr.offsetHeight : 0) - 6;
+  window.scrollTo({ top:Math.max(0,top), behavior: smooth ? "smooth" : "auto" });
+}
+function dCaptureDate(){
+  const el = document.getElementById("x-date");
+  if (el && /^\d{4}-\d{2}-\d{2}$/.test(el.value) && xs.dDraft) xs.dDraft.date = el.value;
+}
+function dOpenReg(entry){
+  xs.dY = window.scrollY;
+  if (entry){
+    const s = aOf(entry.sid);
+    xs.dEditId = entry.id;
+    xs.dDraft = s ? { date:entry.date, sid:s.id, name:"", loc:"" }
+                  : { date:entry.date, sid:null, name:entry.name||"", loc:entry.loc||"" };
+  } else {
+    xs.dEditId = null;
+    xs.dDraft = { date:xs.sel, sid:null, name:"", loc:"" };
+  }
+  xShow("dreg");
+}
+function dCancel(){ xs.dEditId = null; xs.dDraft = null; xShow("daialy", xs.dY); }
+/* ARCHIVEにないサウナ → ARCHIVEの登録画面へ（戻り先はDAIALY登録画面） */
+function dGoNewSauna(prefill){
+  dCaptureDate();
+  xs.aOrigin = "dreg";
+  xs.aEditId = null;
+  aNewDraft({ name:(prefill||"").slice(0,30) });
+  xShow("areg");
+}
+async function dSubmit(){
+  dCaptureDate();
+  const dd = xs.dDraft;
+  const s = aOf(dd.sid);
+  if (!s && !dd.name){ xToast("ARCHIVEからサウナを選択してください"); return; }
+  const rec = s ? { sid:s.id } : { name:dd.name, loc:dd.loc||"" };
+  const wasEdit = !!xs.dEditId;
+  if (wasEdit){
+    const i = dEntries.findIndex((x)=>x.id===xs.dEditId);
+    if (i>=0) dEntries[i] = Object.assign({ id:dEntries[i].id, date:dd.date }, rec);
+  } else {
+    dEntries.push(Object.assign({ id:xNewId(), date:dd.date }, rec));
+  }
+  const ok = await dSave();
+  const prevMonth = xs.y + "-" + xs.m;
+  const d = parseYmd(dd.date);
+  xs.y = d.getFullYear(); xs.m = d.getMonth(); xs.sel = dd.date;
+  xs.dEditId = null; xs.dDraft = null;
+  view = "daialy"; render();
+  if (xs.mode==="list") dScrollToSel(false);
+  else window.scrollTo(0, prevMonth===(xs.y+"-"+xs.m) ? xs.dY : 0);
+  xToast(ok ? (wasEdit ? "記録を更新しました" : "記録を登録しました") : "保存できませんでした");
+}
+async function dRemove(){
+  const e = dEntries.find((x)=>x.id===xs.dEditId);
+  if (!e) return;
+  const yes = await showConfirm(`「${esc(dInfo(e).name)}」の記録を削除しますか？`, "削除する", "戻る");
+  if (!yes) return;
+  dEntries = dEntries.filter((x)=>x.id!==e.id);
+  await dSave();
+  dCancel();
+  xToast("記録を削除しました");
+}
+
+/* ================================================================
+   ARCHIVE の操作
+   ================================================================ */
+function aScrollToListTop(smooth){
+  const el = document.getElementById("x-listsec");
+  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: smooth ? "smooth" : "auto" });
+}
+function aApplySearch(){
+  const inp = document.getElementById("x-sq");
+  if (inp){ aSearch.q = inp.value; inp.blur(); }
+  const q = aSearch.q.trim();
+  aApplied = (q || aSearch.prefs.length || aSearch.star.length)
+    ? { q, prefs:aSearch.prefs.slice(), star:aSearch.star.slice() } : null;
+  render();
+  aScrollToListTop(false);
+}
+function aResetSearch(){ aSearch = { q:"", prefs:[], star:[] }; aApplied = null; }
+/* 登録画面の下書き。画像はプレビュー用URLを都度作成し、閉じるときに解放する */
+function aNewDraft(base){
+  aDropDraft();
+  aDraft = { name:"", pref:"", star:0, img:null, preview:"" };
+  Object.assign(aDraft, base || {});
+  if (aDraft.img) aDraft.preview = URL.createObjectURL(new Blob([aDraft.img], { type:"image/jpeg" }));
+}
+function aSetDraftImg(buf){
+  if (aDraft.preview) URL.revokeObjectURL(aDraft.preview);
+  aDraft.img = buf || null;
+  aDraft.preview = buf ? URL.createObjectURL(new Blob([buf], { type:"image/jpeg" })) : "";
+}
+function aDropDraft(){ if (aDraft && aDraft.preview) URL.revokeObjectURL(aDraft.preview); aDraft = null; }
+function aCancel(){
+  xs.aEditId = null;
+  aDropDraft();
+  if (xs.aOrigin==="dreg") xShow("dreg");
+  else if (xs.aOrigin==="detail") xShow("adetail");
+  else xShow("archive", xs.aY);
+}
+async function aSubmit(){
+  if (xBusy) return;
+  const name = aDraft.name.trim().slice(0,30);
+  if (!name){ xToast("サウナ施設名を入力してください"); return; }
+  xBusy = true;
+  const editing = xs.aEditId;
+  let it, imgChanged = false, ok = true;
+  if (editing){
+    it = aOf(editing);
+    if (!it){ xBusy = false; return; }
+    imgChanged = it.img !== aDraft.img;
+    Object.assign(it, { name, pref:aDraft.pref, star:aDraft.star ? 1 : 0, img:aDraft.img || null });
+    if (imgChanged) aRevoke(it.id);
+  } else {
+    it = { id:xNewId(), name, pref:aDraft.pref, star:aDraft.star ? 1 : 0, img:aDraft.img || null, at:Date.now() };
+    aItems.push(it);
+  }
+  try{
+    await idbSet(ARC_PREFIX+it.id, it);
+    if (editing && imgChanged) await rebuildDatabase();   /* 古い画像の残骸を消して容量を戻す */
+  }catch(e){ ok = false; storageOK = false; showBanner(); }
+  xBusy = false;
+  aDropDraft();
+  xs.aEditId = null;
+  const fail = "保存できませんでした";
+  if (editing){
+    xs.detailId = it.id; xShow("adetail");
+    xToast(ok ? "保存しました" : fail);
+  } else if (xs.aOrigin==="dreg"){
+    /* DAIALY登録画面に戻り、登録したサウナを選択済みにする */
+    xs.dDraft.sid = it.id; xs.dDraft.name = ""; xs.dDraft.loc = "";
+    xShow("dreg");
+    xToast(ok ? "ARCHIVEに登録し、このサウナを選択しました" : fail);
+  } else {
+    aResetSearch();
+    view = "archive"; render();
+    const el = document.getElementById("x-card-"+it.id);
+    if (el) el.scrollIntoView({ block:"center" });
+    xToast(ok ? "登録しました" : fail);
+  }
+}
+async function aRemove(){
+  const it = aOf(xs.detailId);
+  if (!it) return;
+  const linked = dEntries.filter((e)=>e.sid===it.id).length;
+  const note = linked ? `<br><span style="font-size:12px;color:var(--paper-dim);">DAIALYの記録${linked}件は、施設名だけ残ります</span>` : "";
+  const yes = await showConfirm(`「${esc(it.name)}」を削除しますか？${note}`, "削除する", "戻る");
+  if (!yes) return;
+  if (linked){
+    dEntries = dEntries.map((e)=>e.sid===it.id ? { id:e.id, date:e.date, name:it.name, loc:shortPref(it.pref) } : e);
+    await dSave();
+  }
+  aItems = aItems.filter((x)=>x.id!==it.id);
+  aRevoke(it.id);
+  try{ await idbDel(ARC_PREFIX+it.id); await rebuildDatabase(); }catch(e){}
+  xShow("archive", xs.aY);
+  xToast("削除しました");
+}
+function xBack(){
+  if (view==="daialy" || view==="archive") go("home");
+  else if (view==="dreg") dCancel();
+  else if (view==="adetail") xShow("archive", xs.aY);
+  else if (view==="areg") aCancel();
+}
+
+/* ================================================================
+   イベント（本体とは data-x 属性で区別）
+   ================================================================ */
+document.addEventListener("click", (ev)=>{
+  if (ev.target===xSheet){ xCloseSheet(); return; }
+  const el = ev.target.closest ? ev.target.closest("[data-x]") : null;
+  if (!el) return;
+  const act = el.getAttribute("data-x");
+  switch (act){
+    case "open-daialy":
+      view = "daialy"; render(); window.scrollTo(0,0);
+      if (xs.mode==="list") dScrollToSel(false);
+      return;
+    case "open-archive": xShow("archive"); return;
+
+    /* DAIALY */
+    case "d-today": {
+      const t = new Date();
+      xs.y = t.getFullYear(); xs.m = t.getMonth(); xs.sel = ymd(t);
+      render();
+      if (xs.mode==="list") dScrollToSel(true); else window.scrollTo({ top:0, behavior:"smooth" });
+      return;
+    }
+    case "d-prev": case "d-next": dChangeMonth(act==="d-next" ? 1 : -1); return;
+    case "d-mode-cal": case "d-mode-list": {
+      const mode = act==="d-mode-cal" ? "cal" : "list";
+      if (xs.mode===mode) return;          /* 表示中の場合は反応なし */
+      xs.mode = mode; render();
+      if (mode==="list") dScrollToSel(false); else window.scrollTo(0,0);
+      return;
+    }
+    case "d-select":
+      if (xs.sel===el.getAttribute("data-date")) return;
+      xs.sel = el.getAttribute("data-date"); xRerenderKeep(); return;
+    case "d-add": dOpenReg(null); return;
+    case "d-open": { const e = dEntries.find((x)=>x.id===el.getAttribute("data-id")); if (e) dOpenReg(e); return; }
+    case "d-cancel": dCancel(); return;
+    case "d-submit": dSubmit(); return;
+    case "d-delete": dRemove(); return;
+    case "d-pick": dCaptureDate(); xOpenSaunaPicker(); return;
+    case "d-new": dGoNewSauna(""); return;
+    case "sp-pick":
+      xs.dDraft.sid = el.getAttribute("data-id"); xs.dDraft.name = ""; xs.dDraft.loc = "";
+      xCloseSheet(); xRerenderKeep(); return;
+    case "sp-new": {
+      const q = (document.getElementById("x-spq") || {}).value || "";
+      xCloseSheet(); dGoNewSauna(q.trim()); return;
+    }
+
+    /* ARCHIVE */
+    case "a-to-list": aScrollToListTop(true); return;
+    case "a-search": aApplySearch(); return;
+    case "a-clear-search": aResetSearch(); render(); aScrollToListTop(false); return;
+    case "a-add":
+      xs.aY = window.scrollY; xs.aOrigin = "archive"; xs.aEditId = null;
+      aNewDraft(); xShow("areg"); return;
+    case "a-detail":
+      xs.aY = window.scrollY; xs.detailId = el.getAttribute("data-id"); xShow("adetail"); return;
+    case "a-back": xShow("archive", xs.aY); return;
+    case "a-edit": {
+      const it = aOf(xs.detailId);
+      if (!it) return;
+      xs.aOrigin = "detail"; xs.aEditId = it.id;
+      aNewDraft({ name:it.name, pref:it.pref||"", star:it.star ? 1 : 0, img:it.img || null });
+      xShow("areg"); return;
+    }
+    case "a-delete": aRemove(); return;
+    case "a-cancel": aCancel(); return;
+    case "a-submit": aSubmit(); return;
+    case "a-img-clear": aSetDraftImg(null); xRerenderKeep(); return;
+
+    /* 地域・星の選択シート */
+    case "pk-pref-search": xOpenPicker("pref","search"); return;
+    case "pk-star-search": xOpenPicker("star","search"); return;
+    case "pk-pref-draft": xOpenPicker("pref","draft"); return;
+    case "pk-star-draft": xOpenPicker("star","draft"); return;
+    case "pk-cancel": xCloseSheet(); return;
+    case "pk-ok": xCommitPicker(); return;
+    case "pk-none": if (xPicker){ xPicker.sel.clear(); xCommitPicker(); } return;
+    case "pk-clear":
+      if (!xPicker) return;
+      xPicker.sel.clear();
+      xSheet.querySelectorAll(".on").forEach((n)=>n.classList.remove("on"));
+      return;
+    case "pk-pref": case "pk-star": {
+      if (!xPicker) return;
+      const v = act==="pk-pref" ? el.getAttribute("data-pref") : Number(el.getAttribute("data-star"));
+      if (xPicker.multi){
+        if (xPicker.sel.has(v)) xPicker.sel.delete(v); else xPicker.sel.add(v);
+        el.classList.toggle("on", xPicker.sel.has(v));
+      } else {
+        xPicker.sel = new Set([v]);
+        xCommitPicker();
+      }
+      return;
+    }
+  }
+});
+document.addEventListener("input", (ev)=>{
+  const id = ev.target.id;
+  if (id==="x-sq") aSearch.q = ev.target.value;
+  else if (id==="x-spq") xRefreshSaunaList();
+  else if (id==="x-date") dCaptureDate();
+  else if (id==="x-aname" && aDraft){
+    aDraft.name = ev.target.value;
+    const b = document.getElementById("x-asubmit");
+    if (b) b.classList.toggle("off", !aDraft.name.trim());
+  }
+});
+document.addEventListener("keydown", (ev)=>{
+  if (ev.key!=="Enter") return;
+  if (ev.target.id==="x-sq"){ ev.preventDefault(); aApplySearch(); }
+  if (ev.target.id==="x-spq"){ ev.preventDefault(); ev.target.blur(); }
+});
+document.addEventListener("change", async (ev)=>{
+  if (ev.target.id==="x-date"){ dCaptureDate(); return; }
+  if (ev.target.id!=="x-aimg") return;
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = "";
+  if (!file) return;
+  try{
+    const img = await decodeViaImg(await fileToDataURL(file));
+    /* カード表示に必要な解像度(1080×720)・画質で保存し、容量を抑える */
+    openCropper(img, { ar:2/3, outW:1080, outH:720, q:0.8, steps:[0.7,0.6,0.5], maxLen:340000,
+      onDone:(out)=>{ if (aDraft){ aSetDraftImg(dataURLtoBytes(out).buffer); xRerenderKeep(); } } });
+  }catch(e){ xToast("この画像は読み込めませんでした"); }
+});
+
+/* ---------------- スワイプ操作 ----------------
+   ・左→右スワイプで前の画面へ戻る（進む操作はなし）
+   ・DAIALY（月表示・リスト表示）では、左右スワイプで月を切り替える。
+     画面の左端から右へスワイプした場合のみ「戻る」
+   ・切り抜き・ポップアップ・選択シート表示中は無効 */
 function goBack(){
   const map = { tiers:"home", settingsTiers:"home", tierView:"tiers", settingsTier:"settingsTiers" };
-  const target = map[view];
-  if (target) go(target);
+  if (map[view]){ go(map[view]); return; }
+  if (xIsView(view)) xBack();
 }
 let swipeStart = null;
 document.addEventListener("touchstart",(ev)=>{
   const cropOpen = document.getElementById("cropper").classList.contains("open");
   const modalOpen = document.getElementById("modal").classList.contains("open");
-  if (cropOpen || modalOpen || ev.touches.length!==1){ swipeStart = null; return; }
+  const sheetOpen = document.getElementById("x-sheet").classList.contains("open");
+  const onInput = ev.target && ev.target.closest && ev.target.closest("input");
+  if (cropOpen || modalOpen || sheetOpen || onInput || ev.touches.length!==1){ swipeStart = null; return; }
   const t = ev.touches[0];
-  swipeStart = { x:t.clientX, y:t.clientY, time:Date.now() };
+  swipeStart = { x:t.clientX, y:t.clientY, time:Date.now(), edge:t.clientX < 28 };
 },{passive:true});
 document.addEventListener("touchend",(ev)=>{
   if (!swipeStart) return;
+  const s0 = swipeStart; swipeStart = null;
   const t = ev.changedTouches[0];
-  const dx = t.clientX - swipeStart.x;
-  const dy = Math.abs(t.clientY - swipeStart.y);
-  const dt = Date.now() - swipeStart.time;
-  swipeStart = null;
-  /* 左→右へ80px以上・縦ブレ60px未満・0.8秒以内のスワイプで戻る */
-  if (dx > 80 && dy < 60 && dt < 800) goBack();
+  const dx = t.clientX - s0.x;
+  const dy = Math.abs(t.clientY - s0.y);
+  const dt = Date.now() - s0.time;
+  if (dy >= 60 || dt >= 800 || Math.abs(dx) < dy*1.5) return;   /* 縦スクロールは無視 */
+  if (view==="daialy" && !s0.edge){
+    if (Math.abs(dx) > 60) dChangeMonth(dx < 0 ? 1 : -1);
+    return;
+  }
+  /* 左→右へ80px以上で戻る */
+  if (dx > 80) goBack();
 },{passive:true});
 
 function render(){
@@ -1637,7 +2871,9 @@ function render(){
   else if (view==="settingsTiers") root.innerHTML = tiersHTML(true);
   else if (view==="tierView") root.innerHTML = tierViewHTML();
   else if (view==="settingsTier") root.innerHTML = settingsHTML();
-  /* 背景画像: トップ/START/設定画面のみに適用 */
+  else if (xIsView(view)) root.innerHTML = xRender();
+  if (!xIsView(view)) xLastKey = "";
+  /* 背景画像: トップ/AWARD/設定画面のみに適用 */
   const bgEl = document.getElementById("bgimg");
   if (bgEl){
     const showBg = appBg && (view==="home" || view==="tiers" || view==="settingsTiers");
@@ -1656,7 +2892,7 @@ function render(){
     calcDataSize().then((bytes)=>{
       const el = document.getElementById("usage");
       if (el){
-        el.textContent = `登録データ容量: ${(bytes/1048576).toFixed(1)} MB`;
+        el.textContent = `登録データ容量: ${(bytes/1048576).toFixed(1)} MB（AWARD・DAIALY・ARCHIVE・背景の合計）`;
       }
     }).catch(()=>{});
   }

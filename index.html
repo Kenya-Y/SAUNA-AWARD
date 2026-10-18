@@ -455,6 +455,16 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 }
 .x-media .x-bars{position:absolute;left:-18px;top:52px;}
 .x-cname{font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:24px;line-height:1.45;margin:20px 0 0;letter-spacing:.02em;word-break:break-word;}
+.x-ctier{display:flex;flex-wrap:wrap;gap:16px;margin:12px 0 0;}
+/* Tier画面トップの「TIER I」と同じ書体（極太サンセリフ＋金のローマ数字） */
+.x-ctier .romaji{font-size:20px;line-height:1.1;}
+.x-ctier .num-gold{font-size:1.05em;line-height:1;}
+/* データ最適化中の表示 */
+#x-busy{position:fixed;inset:0;z-index:90;display:none;background:rgba(5,4,3,.75);align-items:center;justify-content:center;}
+#x-busy.on{display:flex;}
+.x-awfield{margin-top:2px;}
+.x-awfield .x-pick{padding:10px 2px;}
+.x-awfield .x-newlink{margin:6px 0 0;font-size:11px;}
 .x-cloc{font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:700;font-size:16px;margin:8px 0 0;letter-spacing:.03em;}
 .x-empty{padding:40px 24px 0;text-align:center;font-size:13px;color:var(--paper-dim);line-height:2;}
 .x-empty span{font-size:12px;color:rgba(255,255,255,.38);}
@@ -522,17 +532,18 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 <div id="modal"></div>
 <div id="x-sheet"></div>
 <div id="x-toast" role="status" aria-live="polite"></div>
+<div id="x-busy"><span class="eyebrow">データを最適化しています…</span></div>
 
 <script>
 "use strict";
 
 /* ============================================================
-   SAUNA AWARD ver3.0 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
+   SAUNA AWARD ver3.2 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
    メニュー: DAIALY / ARCHIVE / AWARD / 設定
-   ・AWARD  : Tier1〜3に各7施設（和名 / ローマ字 / Address / URL / 画像 / ミニ写真）
+   ・AWARD  : Tier1〜3に各7施設（和名はARCHIVEから選択 / ローマ字 / Address / URL / 画像 / ミニ写真）
    ・DAIALY : 行ったサウナをカレンダーで記録（ARCHIVEの施設から選択）
    ・ARCHIVE: 行ったサウナを登録・検索・一覧表示
-   ・永続化: IndexedDB "sauna-award"（全機能共通）
+   ・永続化: IndexedDB "sauna-award"（全機能共通）。画像はすべてJPEGのバイナリで保存（ver3.2〜）
    ・バックアップ: AWARD・DAIALY・ARCHIVE・背景をまとめてzipで保存／復元
    ============================================================ */
 
@@ -544,7 +555,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 30;
 const MAX_DATAURL = 1400000;
-const APP_VER = "3.0";
+const APP_VER = "3.2";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -564,17 +575,56 @@ function openDB(){
   });
   return dbPromise;
 }
-function idbGet(key){
-  return openDB().then(db=>new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readonly").objectStore(STORE).get(key);
-    tx.onsuccess = ()=>res(tx.result===undefined?null:tx.result);
-    tx.onerror = ()=>rej(tx.error);
-  }));
+/* ---- 画像の保存形式（ver3.2〜） ----
+   アプリ内では画像を data: URL（文字列）で扱うが、保存時はJPEGのバイナリに変換する。
+   base64文字列のまま保存するより約25%小さい。読み込み時に自動で data: URL に戻すため
+   旧形式（文字列）で保存されたデータもそのまま読める */
+const FMT_KEY = "fmt";       /* 保存形式の目印（2 = 画像をバイナリで保存済み） */
+let fmtOK = false;
+function packVal(v){
+  if (typeof v==="string" && v.startsWith("data:image/") && v.indexOf(";base64,")>0){
+    return { __img:dataURLtoBytes(v).buffer, m:v.slice(5, v.indexOf(";")) };
+  }
+  if (Array.isArray(v)) return v.map(packVal);
+  if (v && typeof v==="object" && !(v instanceof ArrayBuffer)){
+    const o = {}; for (const k in v) o[k] = packVal(v[k]); return o;
+  }
+  return v;
 }
-function idbSet(key,val){
+function unpackVal(v){
+  if (v && typeof v==="object" && v.__img instanceof ArrayBuffer){
+    return bytesToDataURL(new Uint8Array(v.__img), v.m || "image/jpeg");
+  }
+  if (Array.isArray(v)) return v.map(unpackVal);
+  if (v && typeof v==="object" && !(v instanceof ArrayBuffer)){
+    const o = {}; for (const k in v) o[k] = unpackVal(v[k]); return o;
+  }
+  return v;
+}
+function idbRawSet(key,val){
   return openDB().then(db=>new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite").objectStore(STORE).put(val,key);
     tx.onsuccess = ()=>res(true);
+    tx.onerror = ()=>rej(tx.error);
+  }));
+}
+function idbGet(key){
+  return openDB().then(db=>new Promise((res,rej)=>{
+    const tx = db.transaction(STORE,"readonly").objectStore(STORE).get(key);
+    tx.onsuccess = ()=>res(tx.result===undefined?null:unpackVal(tx.result));
+    tx.onerror = ()=>rej(tx.error);
+  }));
+}
+async function idbSet(key,val){
+  await idbRawSet(key, packVal(val));
+  /* 新しい形式で書き込んだDBには目印を付ける */
+  if (!fmtOK && key!==FMT_KEY){ fmtOK = true; try{ await idbRawSet(FMT_KEY, 2); }catch(e){} }
+  return true;
+}
+function idbKeys(){
+  return openDB().then(db=>new Promise((res,rej)=>{
+    const tx = db.transaction(STORE,"readonly").objectStore(STORE).getAllKeys();
+    tx.onsuccess = ()=>res(tx.result || []);
     tx.onerror = ()=>rej(tx.error);
   }));
 }
@@ -597,6 +647,7 @@ function normalize(e){
     url:     e.url     || "",
     image:   e.image   || "",
     minis:   Array.isArray(e.minis) ? e.minis.filter(Boolean).slice(0,3) : [],
+    sid:     e.sid     || "",   /* 和名を選んだARCHIVEの施設id（ver3.1〜） */
   };
 }
 function isEmpty(e){ return !e.title && !e.roman && !e.address && !e.url && !e.image && (!e.minis || e.minis.length===0); }
@@ -674,17 +725,28 @@ function deleteOwnDatabase(){
 /* アプリが実際に保持しているデータ量（バイト）を直接計算する。
    OSへの問い合わせ(navigator.storage.estimate)は内部ファイルの
    整理が終わるまで減少が反映されないため、表示にはこちらを使う */
+/* 保存される実サイズ（画像はバイナリのバイト数、それ以外は文字数）を求める */
+function storedSize(v){
+  if (v==null) return 0;
+  let bin = 0;
+  const json = JSON.stringify(v, (k,x)=>{
+    if (typeof x==="string" && x.startsWith("data:image/")){ bin += Math.floor((x.length - x.indexOf(",") - 1) * 3 / 4); return ""; }
+    if (x instanceof ArrayBuffer){ bin += x.byteLength; return ""; }
+    return x;
+  });
+  return bin + (json ? json.length : 0);
+}
 async function calcDataSize(){
   await bgReady;
   await tierBgReady;
-  let bytes = appBg ? appBg.length : 0;
-  for (const t of [1,2,3]) if (tierBgs[t]) bytes += tierBgs[t].length;
+  let bytes = storedSize(appBg);
+  for (const t of [1,2,3]) if (tierBgs[t]) bytes += storedSize(tierBgs[t]);
   for (const T of TIERS){
     const t = T.id;
     const arr = cache[t] || await loadTier(t);
     if (!cache[t]) cache[t] = arr;
     for (const e of arr){
-      if (e) bytes += JSON.stringify(e).length;
+      if (e) bytes += storedSize(e);
     }
   }
   /* DAIALY・ARCHIVE */
@@ -729,6 +791,10 @@ async function rebuildDatabase(){
       /* DAIALY・ARCHIVE */
       for (const it of aItems) await idbSet(ARC_PREFIX+it.id, it);
       if (dEntries.length) await idbSet(DY_KEY, dPack());
+      await idbRawSet(FMT_KEY, 2);
+      fmtOK = true;
+    } else {
+      fmtOK = false;   /* DBは空（削除済み）。次の保存時に目印を付け直す */
     }
     for (const T of TIERS) cache[T.id] = all[T.id];
   } finally {
@@ -922,6 +988,12 @@ async function buildBackup(){
       });
     }
   }
+  /* AWARDの枠とARCHIVEの施設のつながり: Tier,No,ARCHIVEのid */
+  let links = "";
+  for (const T of TIERS){
+    (cache[T.id]||[]).forEach((e,i)=>{ if (e && e.sid) links += `${T.id},${i+1},${e.sid}\n`; });
+  }
+  files.push({ name:"award_links.csv", data:new TextEncoder().encode(links) });
   /* DAIALY・ARCHIVE */
   await xReady;
   for (const f of xBackupFiles()) files.push(f);
@@ -933,7 +1005,7 @@ async function restoreFromZip(file){
   const entries = await readZip(await file.arrayBuffer());
   if (!entries.length) throw new Error("zip内にファイルがありません");
   /* 復元は全上書き: まず空のモデルを作り、zipの内容を流し込む */
-  const blank = ()=>({title:"",roman:"",address:"",url:"",image:"",minis:[]});
+  const blank = ()=>({title:"",roman:"",address:"",url:"",image:"",minis:[],sid:""});
   const model = {1:[],2:[],3:[]};
   for (const t of [1,2,3]) for (let i=0;i<SLOTS;i++) model[t].push(blank());
   let recognized = 0;
@@ -945,7 +1017,14 @@ async function restoreFromZip(file){
     const miniMatch = f.name.match(/^mini_tier([123])_([1-7])_([123])\.(jpg|jpeg|png)$/i);
     const bgMatch = f.name.match(/^bg\.(jpg|jpeg|png)$/i);
     const tbgMatch = f.name.match(/^bg_tier([123])\.(jpg|jpeg|png)$/i);
-    if (bgMatch){
+    if (f.name==="award_links.csv"){
+      recognized++;
+      for (const line of new TextDecoder().decode(f.data).split(/\r?\n/)){
+        const pp = line.split(",");
+        const tt = Number(pp[0]), nn = Number(pp[1]), sid = (pp[2]||"").trim();
+        if (tt>=1 && tt<=3 && nn>=1 && nn<=SLOTS && sid) model[tt][nn-1].sid = sid;
+      }
+    } else if (bgMatch){
       recognized++;
       newBg = bytesToDataURL(f.data, extMime(f.name));
     } else if (tbgMatch){
@@ -1026,6 +1105,7 @@ async function restoreFromZip(file){
   }
   for (const it of aItems) await idbSet(ARC_PREFIX+it.id, it);
   if (dEntries.length) await idbSet(DY_KEY, dPack());
+  try{ await idbRawSet(FMT_KEY, 2); fmtOK = true; }catch(e){}
 }
 
 /* ミニ写真用: 小さめに圧縮 */
@@ -1044,7 +1124,7 @@ async function compressMini(file){
   const c = document.createElement("canvas");
   c.width=w; c.height=h;
   c.getContext("2d").drawImage(src,0,0,w,h);
-  for (const q of [0.8,0.65,0.5,0.35]){
+  for (const q of [0.75,0.65,0.5,0.35]){
     const out = c.toDataURL("image/jpeg",q);
     if (out.length < 500000) return out;
   }
@@ -1416,7 +1496,7 @@ function settingsHTML(){
       </label>
       <div style="margin-top:18px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（和名）</p>
-        <input class="tinput js-title" data-slot="${i}" maxlength="${MAX_TITLE}" placeholder="例：北こぶし知床 ホテル&リゾート" value="${v("title")}">
+        ${awardTitleField(e, i)}
       </div>
       <div style="margin-top:6px;">
         <p class="flabel" style="margin:0 0 2px;">サウナ施設名（ローマ字）</p>
@@ -1460,7 +1540,7 @@ function settingsHTML(){
       <p class="eyebrow" style="margin-top:14px;">Settings</p>
       <h2 class="romaji" style="font-size:clamp(30px,8.5vw,52px);margin:4px 0 0;">TIER <span class="num-gold">${t.roman}</span> SETTING</h2>
       <p style="font-size:12px;color:var(--paper-dim);letter-spacing:.15em;margin-top:10px;line-height:1.9;">
-        画像は写真アプリから選択。入力後は「保存」を押してください。<br>
+        画像は写真アプリから選択。施設名（和名）はARCHIVEから選びます。<br>入力後は「保存」を押してください。<br>
         バックアップ・復元は設定トップ（Tier選択画面）から行えます。
       </p>
       <div style="margin-top:14px;">
@@ -1485,7 +1565,8 @@ function readSlotInputs(slot){
   const g = (cls)=>{ const el = root.querySelector(`.${cls}[data-slot="${slot}"]`); return el?el.value:""; };
   const prev = (cache[activeTier]||[])[slot];
   return {
-    title:   g("js-title").slice(0,MAX_TITLE).trim(),
+    title:   (prev&&prev.title)||"",   /* 和名はARCHIVEから選択（入力欄なし） */
+    sid:     (prev&&prev.sid)||"",
     roman:   g("js-roman").trim(),
     address: g("js-address").trim(),
     url:     g("js-url").trim(),
@@ -1655,7 +1736,7 @@ document.addEventListener("change", async (ev)=>{
       if (imgEl){
         /* 切り取り画面を表示し、ユーザーが範囲を選択してから設定 */
         openCropper(imgEl, {
-          ar: CROP_AR, outW: OUT_W, outH: OUT_H,
+          ar: CROP_AR, outW: OUT_W, outH: OUT_H, q: 0.8, steps: [0.7, 0.6, 0.5], maxLen: 800000,
           onDone: async (out)=>{
             setStatus(slot, "SAVING…");
             const next = readSlotInputs(slot);
@@ -1709,8 +1790,9 @@ document.addEventListener("change", async (ev)=>{
       const imgEl = await decodeViaImg(raw);
       /* トップ画面の背景と同じく、スマホの画面サイズと同じ縦横比で切り抜き */
       const ar = window.innerHeight / window.innerWidth;
+      /* 背景は暗いフィルターを重ねて表示するため、画質を抑えても見た目は変わらない */
       openCropper(imgEl, {
-        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)),
+        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)), q: 0.72, steps: [0.62, 0.52, 0.42], maxLen: 700000,
         onDone: async (out)=>{
           await tierBgReady;
           tierBgs[t] = out;
@@ -1738,8 +1820,9 @@ document.addEventListener("change", async (ev)=>{
       const imgEl = await decodeViaImg(raw);
       /* スマホの画面サイズと同じ縦横比で切り抜き */
       const ar = window.innerHeight / window.innerWidth;
+      /* 背景は暗いフィルターを重ねて表示するため、画質を抑えても見た目は変わらない */
       openCropper(imgEl, {
-        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)),
+        ar, outW: 1080, outH: Math.min(2400, Math.round(1080*ar)), q: 0.72, steps: [0.62, 0.52, 0.42], maxLen: 700000,
         onDone: async (out)=>{
           await bgReady;
           appBg = out;
@@ -1974,26 +2057,24 @@ async function dSave(){
 }
 /* 画像の表示用URL（バイナリから作成し、使い回す） */
 const aUrls = new Map();
+/* 保存はバイナリ、表示はメモリ上でdata: URLに変換（blob: URLを使わないため
+   表示環境の制限を受けない）。変換結果はidごとに使い回す */
 function aImgURL(it){
   if (!it || !it.img) return "";
   const c = aUrls.get(it.id);
   if (c && c.buf===it.img) return c.url;
-  if (c) URL.revokeObjectURL(c.url);
-  const url = URL.createObjectURL(new Blob([it.img], { type:"image/jpeg" }));
+  const url = bytesToDataURL(new Uint8Array(it.img), "image/jpeg");
   aUrls.set(it.id, { buf:it.img, url });
   return url;
 }
-function aRevoke(id){ const c = aUrls.get(id); if (c){ URL.revokeObjectURL(c.url); aUrls.delete(id); } }
-function aRevokeAll(){ for (const id of Array.from(aUrls.keys())) aRevoke(id); }
+function aRevoke(id){ aUrls.delete(id); }
+function aRevokeAll(){ aUrls.clear(); }
 
 /* 登録データ容量（DAIALY・ARCHIVE分） */
 function xDataSize(){
   let bytes = 0;
-  for (const it of aItems){
-    bytes += (it.img ? it.img.byteLength : 0);
-    bytes += JSON.stringify({ id:it.id, name:it.name, pref:it.pref, star:it.star, at:it.at }).length;
-  }
-  if (dEntries.length) bytes += JSON.stringify(dPack()).length;
+  for (const it of aItems) bytes += storedSize(it);
+  if (dEntries.length) bytes += storedSize(dPack());
   return bytes;
 }
 
@@ -2057,7 +2138,6 @@ function xParseBackup(entries){
    引き継ぎ後はプロトタイプ側の保存領域を削除して容量の二重化を防ぐ */
 async function migrateFromPrototype(){
   const P_DB = "sauna-award-list-proto", P_KEY = "sauna-award:daialy-proto:v1";
-  if (aItems.length || dEntries.length) return false;
   let hasDB = false, pItems = [], pDaialy = [];
   try{
     if (indexedDB.databases){
@@ -2097,14 +2177,18 @@ async function migrateFromPrototype(){
   const entries = pDaialy.filter((e)=>e && e.id && e.date).map((e)=>(e.saunaId && ids.has(e.saunaId))
     ? { id:e.id, date:e.date, sid:e.saunaId }
     : { id:e.id, date:e.date, name:e.name||"", loc:e.location||"" });
+  /* 正式版にすでにあるもの（同じid）は取り込まない */
+  const haveA = new Set(aItems.map((x)=>x.id)), haveD = new Set(dEntries.map((x)=>x.id));
+  const addA = items.filter((x)=>!haveA.has(x.id)), addD = entries.filter((x)=>!haveD.has(x.id));
   try{
-    for (const it of items) await idbSet(ARC_PREFIX+it.id, it);
-    aItems = items; dEntries = entries;
+    for (const it of addA) await idbSet(ARC_PREFIX+it.id, it);
+    aItems = aItems.concat(addA).sort((a,b)=>a.at-b.at);
+    dEntries = dEntries.concat(addD);
     if (!(await dSave())) throw new Error("save");
   }catch(e){ return false; }
   try{ if (hasDB) indexedDB.deleteDatabase(P_DB); }catch(e){}
   try{ localStorage.removeItem(P_KEY); }catch(e){}
-  return true;
+  return addA.length>0 || addD.length>0;
 }
 
 const xReady = (async ()=>{
@@ -2117,7 +2201,7 @@ const xReady = (async ()=>{
   }catch(e){}
   try{ migrated = await migrateFromPrototype(); }catch(e){}
   xLoaded = true;
-  if (xIsView(view)) xRerenderKeep();
+  if (xIsView(view) || view==="settingsTier") xRerenderKeep();
   if (migrated) xToast("プロトタイプのDAIALY・ARCHIVEを引き継ぎました");
 })();
 
@@ -2304,6 +2388,7 @@ function aCardHTML(it, n, isStatic){
     </div>
     <h3 class="x-cname">${esc(it.name)}</h3>
     ${it.pref ? `<p class="x-cloc">@${esc(shortPref(it.pref))}</p>` : ""}
+    ${awardTiersHTML(it.id)}
   </article>`;
 }
 function aPageHTML(){
@@ -2368,6 +2453,7 @@ function aRegHTML(){
     </header>
     <div class="x-reg-body">
       ${fromDaialy ? `<p class="x-reg-note">登録すると、DAIALYの登録画面に戻ってこのサウナが選ばれます</p>` : ""}
+      ${xs.aOrigin==="award" ? `<p class="x-reg-note">登録すると、AWARDの設定画面に戻ってこのサウナが選ばれます</p>` : ""}
       <p class="x-flab">サウナ施設名</p>
       <label class="x-sinput">
         <input id="x-aname" type="text" maxlength="30" placeholder="例：らかんの湯" value="${esc(d.name)}" autocomplete="off">
@@ -2393,6 +2479,7 @@ function aRegHTML(){
    描画（本体のrender()から呼ばれる）
    ================================================================ */
 function xRender(){
+  if (view==="archive" || view==="adetail") ensureAward();
   const key = view + (view==="daialy" ? ":"+xs.mode : "");
   const anim = key!==xLastKey ? "x-fade" : "";
   xLastKey = key;
@@ -2467,8 +2554,8 @@ function xCommitPicker(){
   xRerenderKeep();
 }
 /* DAIALY用: ARCHIVEのサウナを選ぶシート */
-function xOpenSaunaPicker(){
-  xPicker = { kind:"sauna" };
+function xOpenSaunaPicker(target, slot){
+  xPicker = { kind:"sauna", target:target||"daialy", slot };
   xOpenSheet(`
     <div class="x-sheet-hdr">
       <button class="x-sh-l" data-x="pk-cancel">キャンセル</button>
@@ -2492,7 +2579,9 @@ function xRefreshSaunaList(){
   if (!aItems.length){ box.innerHTML = `<p class="x-sp-empty">ARCHIVEにまだサウナがありません<br>下のボタンから登録できます</p>`; return; }
   const hits = q ? aItems.filter((it)=>norm(it.name).includes(norm(q))) : aItems;
   if (!hits.length){ box.innerHTML = `<p class="x-sp-empty">「${esc(q)}」はARCHIVEにありません<br>下のボタンから登録できます</p>`; return; }
-  const cur = xs.dDraft && xs.dDraft.sid;
+  const cur = (xPicker && xPicker.target==="award")
+    ? awardSidOf((cache[activeTier]||[])[xPicker.slot])
+    : (xs.dDraft && xs.dDraft.sid);
   box.innerHTML = hits.map((it)=>{
     const u = aImgURL(it);
     return `
@@ -2620,18 +2709,18 @@ function aNewDraft(base){
   aDropDraft();
   aDraft = { name:"", pref:"", star:0, img:null, preview:"" };
   Object.assign(aDraft, base || {});
-  if (aDraft.img) aDraft.preview = URL.createObjectURL(new Blob([aDraft.img], { type:"image/jpeg" }));
+  if (aDraft.img) aDraft.preview = bytesToDataURL(new Uint8Array(aDraft.img), "image/jpeg");
 }
-function aSetDraftImg(buf){
-  if (aDraft.preview) URL.revokeObjectURL(aDraft.preview);
+function aSetDraftImg(buf, url){
   aDraft.img = buf || null;
-  aDraft.preview = buf ? URL.createObjectURL(new Blob([buf], { type:"image/jpeg" })) : "";
+  aDraft.preview = buf ? (url || bytesToDataURL(new Uint8Array(buf), "image/jpeg")) : "";
 }
-function aDropDraft(){ if (aDraft && aDraft.preview) URL.revokeObjectURL(aDraft.preview); aDraft = null; }
+function aDropDraft(){ aDraft = null; }
 function aCancel(){
   xs.aEditId = null;
   aDropDraft();
   if (xs.aOrigin==="dreg") xShow("dreg");
+  else if (xs.aOrigin==="award"){ activeTier = xs.awTier; xShow("settingsTier", xs.awY); }
   else if (xs.aOrigin==="detail") xShow("adetail");
   else xShow("archive", xs.aY);
 }
@@ -2646,7 +2735,13 @@ async function aSubmit(){
     it = aOf(editing);
     if (!it){ xBusy = false; return; }
     imgChanged = it.img !== aDraft.img;
+    await ensureAward();
+    const awLinked = awardLinkedSlots(it.id);   /* 名前を変える前に、つながっているAWARDの枠を控える */
     Object.assign(it, { name, pref:aDraft.pref, star:aDraft.star ? 1 : 0, img:aDraft.img || null });
+    for (const { t, i, e } of awLinked){
+      e.title = name.slice(0,MAX_TITLE); e.sid = it.id;
+      try{ await idbSet(keyFor(t,i+1), e); }catch(err){}
+    }
     if (imgChanged) aRevoke(it.id);
   } else {
     it = { id:xNewId(), name, pref:aDraft.pref, star:aDraft.star ? 1 : 0, img:aDraft.img || null, at:Date.now() };
@@ -2663,6 +2758,12 @@ async function aSubmit(){
   if (editing){
     xs.detailId = it.id; xShow("adetail");
     xToast(ok ? "保存しました" : fail);
+  } else if (xs.aOrigin==="award"){
+    /* AWARDの設定画面に戻り、登録したサウナを和名に設定する */
+    activeTier = xs.awTier; view = "settingsTier"; render();
+    await awardPick(xs.awSlot, it.id);
+    window.scrollTo(0, xs.awY);
+    xToast(ok ? "ARCHIVEに登録し、このサウナを選択しました" : fail);
   } else if (xs.aOrigin==="dreg"){
     /* DAIALY登録画面に戻り、登録したサウナを選択済みにする */
     xs.dDraft.sid = it.id; xs.dDraft.name = ""; xs.dDraft.loc = "";
@@ -2680,12 +2781,21 @@ async function aRemove(){
   const it = aOf(xs.detailId);
   if (!it) return;
   const linked = dEntries.filter((e)=>e.sid===it.id).length;
-  const note = linked ? `<br><span style="font-size:12px;color:var(--paper-dim);">DAIALYの記録${linked}件は、施設名だけ残ります</span>` : "";
+  await ensureAward();
+  const awLinked = awardLinkedSlots(it.id);
+  const notes = [];
+  if (awLinked.length) notes.push(`AWARD（${awardTiersOf(it.id).map((T)=>"TIER "+T.roman).join("、")}）に設定されています。AWARD側は施設名だけ残ります`);
+  if (linked) notes.push(`DAIALYの記録${linked}件は、施設名だけ残ります`);
+  const note = notes.length ? `<br><span style="font-size:12px;color:var(--paper-dim);">${notes.join("<br>")}</span>` : "";
   const yes = await showConfirm(`「${esc(it.name)}」を削除しますか？${note}`, "削除する", "戻る");
   if (!yes) return;
   if (linked){
     dEntries = dEntries.map((e)=>e.sid===it.id ? { id:e.id, date:e.date, name:it.name, loc:shortPref(it.pref) } : e);
     await dSave();
+  }
+  for (const { t, i, e } of awLinked){
+    e.title = e.title || it.name; e.sid = "";
+    try{ await idbSet(keyFor(t,i+1), e); }catch(err){}
   }
   aItems = aItems.filter((x)=>x.id!==it.id);
   aRevoke(it.id);
@@ -2693,6 +2803,107 @@ async function aRemove(){
   xShow("archive", xs.aY);
   xToast("削除しました");
 }
+/* ================================================================
+   保存形式の移行（ver3.2）: 旧形式のデータを一度だけ作り直して容量を削減
+   ================================================================ */
+function xBusy_(on){ const b = document.getElementById("x-busy"); if (b) b.classList.toggle("on", !!on); }
+const fmtReady = Promise.all([bgReady, tierBgReady, btnReady, xReady]).then(async ()=>{
+  try{
+    if ((await idbGet(FMT_KEY)) === 2){ fmtOK = true; return; }
+    const keys = await idbKeys();
+    if (!keys.some((k)=>k!==FMT_KEY)) return;          /* データなし */
+    xBusy_(true);
+    await rebuildDatabase();                            /* 全画像をバイナリで保存し直す */
+  }catch(e){}
+  finally{ xBusy_(false); }
+});
+
+/* ================================================================
+   AWARD × ARCHIVE（ver3.1）
+   ・AWARDの和名はARCHIVEの施設から選ぶ（枠には施設id(sid)と施設名の控えを保存）
+   ・ver3.0以前に手入力した和名は、ARCHIVEの施設名と完全に一致すればつながりとして扱う
+   ================================================================ */
+function awardSidOf(e){
+  if (!e) return "";
+  if (e.sid && aOf(e.sid)) return e.sid;
+  if (!e.title) return "";
+  const n = norm(e.title);
+  const hit = aItems.filter((x)=>norm(x.name)===n);
+  return hit.length===1 ? hit[0].id : "";
+}
+function awardLinkedSlots(id){
+  const out = [];
+  for (const T of TIERS){
+    (cache[T.id]||[]).forEach((e,i)=>{ if (e && awardSidOf(e)===id) out.push({ t:T.id, i, e }); });
+  }
+  return out;
+}
+function awardTiersOf(id){
+  return TIERS.filter((T)=>(cache[T.id]||[]).some((e)=>e && awardSidOf(e)===id));
+}
+/* ARCHIVEカード: 所在地の下に設定されているTIERを表示 */
+function awardTiersHTML(id){
+  const ts = awardTiersOf(id);
+  if (!ts.length) return "";
+  return `<p class="x-ctier">${ts.map((T)=>`<span class="romaji">TIER <span class="num-gold">${T.roman}</span></span>`).join("")}</p>`;
+}
+/* AWARDのTier1〜3をすべて読み込む（ARCHIVEのTIER表示用） */
+let awardLoading = null;
+function ensureAward(){
+  if ([1,2,3].every((t)=>cache[t])) return Promise.resolve();
+  if (!awardLoading){
+    awardLoading = Promise.all([1,2,3].map(async (t)=>{ if (!cache[t]) cache[t] = await loadTier(t); }))
+      .then(()=>{ awardLoading = null; if (view==="archive" || view==="adetail") xRerenderKeep(); });
+  }
+  return awardLoading;
+}
+/* AWARD設定画面の「サウナ施設名（和名）」欄 */
+function awardTitleField(e, i){
+  const sid = awardSidOf(e);
+  const s = aOf(sid);
+  let inner;
+  if (s){
+    const u = aImgURL(s);
+    inner = `${u ? `<img class="x-thumb" src="${u}" alt="">` : `<span class="x-thumb ph">${XI.sauna}</span>`}
+      <span class="x-etext"><span class="x-nm">${esc(s.name)}</span>${s.pref?`<span class="x-lc">${XI.pin}${esc(shortPref(s.pref))}</span>`:""}</span>`;
+  } else if (e && e.title){
+    /* ver3.0以前に手入力した和名。ARCHIVEで選び直すまでそのまま保持する */
+    inner = `<span class="x-etext"><span class="x-nm">${esc(e.title)}</span><span class="x-lc">手入力の施設名（このまま保持されます）</span></span>`;
+  } else {
+    inner = `<span class="x-pick-ph">ARCHIVEから選択</span>`;
+  }
+  return `
+  <div class="x-awfield">
+    <button class="x-field x-pick" data-x="aw-pick" data-slot="${i}" aria-label="No.${i+1} のサウナ施設名をARCHIVEから選択">
+      <span class="x-pick-main">${inner}</span><span class="x-chev">${XI.right}</span>
+    </button>
+    ${(!s && e && e.title)
+      ? `<button class="x-link x-newlink" data-x="aw-new" data-slot="${i}" data-name="${esc(e.title)}">「${esc(e.title)}」をARCHIVEに登録して選択する</button>`
+      : `<button class="x-link x-newlink" data-x="aw-new" data-slot="${i}">ARCHIVEにないサウナを登録する</button>`}
+  </div>`;
+}
+/* ARCHIVEの施設を和名に設定して保存（入力途中のローマ字などもあわせて保存） */
+async function awardPick(slot, id){
+  const it = aOf(id);
+  if (!it || view!=="settingsTier") return;
+  const next = readSlotInputs(slot);
+  next.title = it.name.slice(0,MAX_TITLE);
+  next.sid = it.id;
+  const y = window.scrollY;
+  await persistSlot(slot, next);
+  render(); window.scrollTo(0,y);
+  setStatus(slot, "SAVED ✓");
+}
+/* ARCHIVEにないサウナ → ARCHIVEの登録画面へ（戻り先はAWARD設定画面） */
+async function awardGoNewSauna(slot, prefill){
+  const cur = readSlotInputs(slot);
+  if (!isEmpty(cur)) await persistSlot(slot, cur);   /* 入力途中の内容を保存してから移動 */
+  xs.awSlot = slot; xs.awTier = activeTier; xs.awY = window.scrollY;
+  xs.aOrigin = "award"; xs.aEditId = null;
+  aNewDraft({ name:(prefill||"").slice(0,30) });
+  xShow("areg");
+}
+
 function xBack(){
   if (view==="daialy" || view==="archive") go("home");
   else if (view==="dreg") dCancel();
@@ -2739,14 +2950,23 @@ document.addEventListener("click", (ev)=>{
     case "d-cancel": dCancel(); return;
     case "d-submit": dSubmit(); return;
     case "d-delete": dRemove(); return;
-    case "d-pick": dCaptureDate(); xOpenSaunaPicker(); return;
+    case "d-pick": dCaptureDate(); xOpenSaunaPicker("daialy"); return;
+    case "aw-pick": xOpenSaunaPicker("award", Number(el.getAttribute("data-slot"))); return;
+    case "aw-new": awardGoNewSauna(Number(el.getAttribute("data-slot")), el.getAttribute("data-name") || ""); return;
     case "d-new": dGoNewSauna(""); return;
-    case "sp-pick":
+    case "sp-pick": {
+      const target = xPicker && xPicker.target, slot = xPicker && xPicker.slot;
+      xCloseSheet();
+      if (target==="award"){ awardPick(slot, el.getAttribute("data-id")); return; }
       xs.dDraft.sid = el.getAttribute("data-id"); xs.dDraft.name = ""; xs.dDraft.loc = "";
-      xCloseSheet(); xRerenderKeep(); return;
+      xRerenderKeep(); return;
+    }
     case "sp-new": {
-      const q = (document.getElementById("x-spq") || {}).value || "";
-      xCloseSheet(); dGoNewSauna(q.trim()); return;
+      const q = ((document.getElementById("x-spq") || {}).value || "").trim();
+      const target = xPicker && xPicker.target, slot = xPicker && xPicker.slot;
+      xCloseSheet();
+      if (target==="award") awardGoNewSauna(slot, q); else dGoNewSauna(q);
+      return;
     }
 
     /* ARCHIVE */
@@ -2824,7 +3044,7 @@ document.addEventListener("change", async (ev)=>{
     const img = await decodeViaImg(await fileToDataURL(file));
     /* カード表示に必要な解像度(1080×720)・画質で保存し、容量を抑える */
     openCropper(img, { ar:2/3, outW:1080, outH:720, q:0.8, steps:[0.7,0.6,0.5], maxLen:340000,
-      onDone:(out)=>{ if (aDraft){ aSetDraftImg(dataURLtoBytes(out).buffer); xRerenderKeep(); } } });
+      onDone:(out)=>{ if (aDraft){ aSetDraftImg(dataURLtoBytes(out).buffer, out); xRerenderKeep(); } } });
   }catch(e){ xToast("この画像は読み込めませんでした"); }
 });
 

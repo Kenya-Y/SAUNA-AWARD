@@ -532,13 +532,13 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 <div id="modal"></div>
 <div id="x-sheet"></div>
 <div id="x-toast" role="status" aria-live="polite"></div>
-<div id="x-busy"><span class="eyebrow">データを最適化しています…</span></div>
+<div id="x-busy"><span class="eyebrow" id="x-busy-msg" style="text-align:center;line-height:2.2;">データを最適化しています…</span></div>
 
 <script>
 "use strict";
 
 /* ============================================================
-   SAUNA AWARD ver3.2 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
+   SAUNA AWARD ver3.3 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
    メニュー: DAIALY / ARCHIVE / AWARD / 設定
    ・AWARD  : Tier1〜3に各7施設（和名はARCHIVEから選択 / ローマ字 / Address / URL / 画像 / ミニ写真）
    ・DAIALY : 行ったサウナをカレンダーで記録（ARCHIVEの施設から選択）
@@ -553,9 +553,9 @@ const TIERS = [
   { id:3, roman:"III", jp:"名湯" },
 ];
 const SLOTS = 7;
-const MAX_TITLE = 30;
+const MAX_TITLE = 50;   /* 施設名の上限（ARCHIVE・AWARD共通） */
 const MAX_DATAURL = 1400000;
-const APP_VER = "3.2";
+const APP_VER = "3.3";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -950,7 +950,7 @@ async function readZip(buf){
       ).arrayBuffer();
       data = new Uint8Array(ab);
     } else if (method!==0){ continue; }
-    out.push({ name: rawName.split("/").pop(), data });
+    out.push({ name: rawName.split("/").pop(), path: rawName, data });
   }
   return out;
 }
@@ -1377,6 +1377,10 @@ function tiersHTML(isSettings){
         <button class="tool-btn js-backup">バックアップ（zip保存）</button>
         <label class="tool-btn" style="display:inline-block;">
           復元（zip選択）<input class="file-input js-restore" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+        </label>
+        <!-- データ移行用の一時機能（移行完了後に廃止予定） -->
+        <label class="tool-btn" style="display:inline-block;">
+          一括アップロード（CSV＋画像zip）<input class="file-input js-bulk" type="file" multiple accept=".csv,.zip,text/csv,application/zip,application/x-zip-compressed">
         </label>
       </div>
       <p class="status js-bakmsg" style="color:var(--gold);margin-top:10px;display:block;"></p>
@@ -2109,7 +2113,7 @@ function xParseBackup(entries){
         const p = line.split(",");
         if (!p[0] || !p[1] || !p[1].trim()) continue;
         const pref = (p[2]||"").trim();
-        out.items.push({ id:p[0].trim(), name:p[1].trim().slice(0,30), pref:PREF_ORDER.includes(pref) ? pref : "",
+        out.items.push({ id:p[0].trim(), name:p[1].trim().slice(0,MAX_TITLE), pref:PREF_ORDER.includes(pref) ? pref : "",
                          star:Number(p[3])>0 ? 1 : 0, img:null, at:Number(p[4])||Date.now() });
       }
     } else if (f.name==="daialy.csv"){
@@ -2168,7 +2172,7 @@ async function migrateFromPrototype(){
     return false;
   }
   const items = pItems.filter((it)=>it && it.id && it.name).map((it)=>({
-    id:it.id, name:String(it.name).slice(0,30), pref:PREF_ORDER.includes(it.pref) ? it.pref : "",
+    id:it.id, name:String(it.name).slice(0,MAX_TITLE), pref:PREF_ORDER.includes(it.pref) ? it.pref : "",
     star:it.stars>0 ? 1 : 0,
     img:(typeof it.image==="string" && it.image.startsWith("data:")) ? dataURLtoBytes(it.image).buffer : null,
     at:it.createdAt || Date.now(),
@@ -2456,7 +2460,7 @@ function aRegHTML(){
       ${xs.aOrigin==="award" ? `<p class="x-reg-note">登録すると、AWARDの設定画面に戻ってこのサウナが選ばれます</p>` : ""}
       <p class="x-flab">サウナ施設名</p>
       <label class="x-sinput">
-        <input id="x-aname" type="text" maxlength="30" placeholder="例：らかんの湯" value="${esc(d.name)}" autocomplete="off">
+        <input id="x-aname" type="text" maxlength="${MAX_TITLE}" placeholder="例：らかんの湯" value="${esc(d.name)}" autocomplete="off">
       </label>
       <div class="x-frow" style="margin-top:14px;">
         ${xFbtn("地域", d.pref ? shortPref(d.pref) : "未選択", !d.pref, "pk-pref-draft")}
@@ -2650,7 +2654,7 @@ function dGoNewSauna(prefill){
   dCaptureDate();
   xs.aOrigin = "dreg";
   xs.aEditId = null;
-  aNewDraft({ name:(prefill||"").slice(0,30) });
+  aNewDraft({ name:(prefill||"").slice(0,MAX_TITLE) });
   xShow("areg");
 }
 async function dSubmit(){
@@ -2726,7 +2730,7 @@ function aCancel(){
 }
 async function aSubmit(){
   if (xBusy) return;
-  const name = aDraft.name.trim().slice(0,30);
+  const name = aDraft.name.trim().slice(0,MAX_TITLE);
   if (!name){ xToast("サウナ施設名を入力してください"); return; }
   xBusy = true;
   const editing = xs.aEditId;
@@ -2806,7 +2810,12 @@ async function aRemove(){
 /* ================================================================
    保存形式の移行（ver3.2）: 旧形式のデータを一度だけ作り直して容量を削減
    ================================================================ */
-function xBusy_(on){ const b = document.getElementById("x-busy"); if (b) b.classList.toggle("on", !!on); }
+function xBusy_(on, msg){
+  const b = document.getElementById("x-busy");
+  const m = document.getElementById("x-busy-msg");
+  if (m) m.innerHTML = msg || "データを最適化しています…";
+  if (b) b.classList.toggle("on", !!on);
+}
 const fmtReady = Promise.all([bgReady, tierBgReady, btnReady, xReady]).then(async ()=>{
   try{
     if ((await idbGet(FMT_KEY)) === 2){ fmtOK = true; return; }
@@ -2819,17 +2828,11 @@ const fmtReady = Promise.all([bgReady, tierBgReady, btnReady, xReady]).then(asyn
 });
 
 /* ================================================================
-   AWARD × ARCHIVE（ver3.1）
+   AWARD × ARCHIVE
    ・AWARDの和名はARCHIVEの施設から選ぶ（枠には施設id(sid)と施設名の控えを保存）
-   ・ver3.0以前に手入力した和名は、ARCHIVEの施設名と完全に一致すればつながりとして扱う
    ================================================================ */
 function awardSidOf(e){
-  if (!e) return "";
-  if (e.sid && aOf(e.sid)) return e.sid;
-  if (!e.title) return "";
-  const n = norm(e.title);
-  const hit = aItems.filter((x)=>norm(x.name)===n);
-  return hit.length===1 ? hit[0].id : "";
+  return (e && e.sid && aOf(e.sid)) ? e.sid : "";
 }
 function awardLinkedSlots(id){
   const out = [];
@@ -2867,8 +2870,8 @@ function awardTitleField(e, i){
     inner = `${u ? `<img class="x-thumb" src="${u}" alt="">` : `<span class="x-thumb ph">${XI.sauna}</span>`}
       <span class="x-etext"><span class="x-nm">${esc(s.name)}</span>${s.pref?`<span class="x-lc">${XI.pin}${esc(shortPref(s.pref))}</span>`:""}</span>`;
   } else if (e && e.title){
-    /* ver3.0以前に手入力した和名。ARCHIVEで選び直すまでそのまま保持する */
-    inner = `<span class="x-etext"><span class="x-nm">${esc(e.title)}</span><span class="x-lc">手入力の施設名（このまま保持されます）</span></span>`;
+    /* ARCHIVEとつながっていない施設名（ARCHIVE側で削除された場合など） */
+    inner = `<span class="x-etext"><span class="x-nm">${esc(e.title)}</span><span class="x-lc x-warn">ARCHIVEから選択されていません</span></span>`;
   } else {
     inner = `<span class="x-pick-ph">ARCHIVEから選択</span>`;
   }
@@ -2877,9 +2880,7 @@ function awardTitleField(e, i){
     <button class="x-field x-pick" data-x="aw-pick" data-slot="${i}" aria-label="No.${i+1} のサウナ施設名をARCHIVEから選択">
       <span class="x-pick-main">${inner}</span><span class="x-chev">${XI.right}</span>
     </button>
-    ${(!s && e && e.title)
-      ? `<button class="x-link x-newlink" data-x="aw-new" data-slot="${i}" data-name="${esc(e.title)}">「${esc(e.title)}」をARCHIVEに登録して選択する</button>`
-      : `<button class="x-link x-newlink" data-x="aw-new" data-slot="${i}">ARCHIVEにないサウナを登録する</button>`}
+    <button class="x-link x-newlink" data-x="aw-new" data-slot="${i}">ARCHIVEにないサウナを登録する</button>
   </div>`;
 }
 /* ARCHIVEの施設を和名に設定して保存（入力途中のローマ字などもあわせて保存） */
@@ -2900,7 +2901,7 @@ async function awardGoNewSauna(slot, prefill){
   if (!isEmpty(cur)) await persistSlot(slot, cur);   /* 入力途中の内容を保存してから移動 */
   xs.awSlot = slot; xs.awTier = activeTier; xs.awY = window.scrollY;
   xs.aOrigin = "award"; xs.aEditId = null;
-  aNewDraft({ name:(prefill||"").slice(0,30) });
+  aNewDraft({ name:(prefill||"").slice(0,MAX_TITLE) });
   xShow("areg");
 }
 
@@ -2952,7 +2953,7 @@ document.addEventListener("click", (ev)=>{
     case "d-delete": dRemove(); return;
     case "d-pick": dCaptureDate(); xOpenSaunaPicker("daialy"); return;
     case "aw-pick": xOpenSaunaPicker("award", Number(el.getAttribute("data-slot"))); return;
-    case "aw-new": awardGoNewSauna(Number(el.getAttribute("data-slot")), el.getAttribute("data-name") || ""); return;
+    case "aw-new": awardGoNewSauna(Number(el.getAttribute("data-slot")), ""); return;
     case "d-new": dGoNewSauna(""); return;
     case "sp-pick": {
       const target = xPicker && xPicker.target, slot = xPicker && xPicker.slot;
@@ -3047,6 +3048,149 @@ document.addEventListener("change", async (ev)=>{
       onDone:(out)=>{ if (aDraft){ aSetDraftImg(dataURLtoBytes(out).buffer, out); xRerenderKeep(); } } });
   }catch(e){ xToast("この画像は読み込めませんでした"); }
 });
+
+
+/* =====================================================================
+   一括アップロード（データ移行用の一時機能 / ver3.3）
+   ---------------------------------------------------------------------
+   ・CSV（番号,施設名,都道府県）と画像zip（「番号.施設名/施設名.jpg」）を読み込み、
+     ARCHIVEに一括で追加する
+   ・既存の登録は上書きしない。同じ施設名がすでにARCHIVEにあるものはスキップ
+     （途中で止まっても、同じ2ファイルを選び直せば続きから登録できる）
+   ・画像は通常の登録と同じく3:2・1080×720のJPEGにして保存（中央で切り抜き）
+   ・移行完了後はこのブロックと設定画面のボタンを削除する
+   ===================================================================== */
+let bulkFiles = { csv:null, zip:null };
+function bulkMsg(t){ const m = root.querySelector(".js-bakmsg"); if (m) m.textContent = t; }
+function bulkParseCSV(text){
+  const rows = [];
+  for (const line of text.replace(/^\uFEFF/,"").split(/\r?\n/)){
+    if (!line.trim()) continue;
+    const p = line.split(",");
+    const n = Number(p[0]);
+    if (!(n>0) || p.length < 3) continue;
+    const pref = p[p.length-1].trim();
+    const name = p.slice(1, -1).join(",").trim().slice(0, MAX_TITLE);
+    if (!name) continue;
+    rows.push({ n, name, pref:PREF_ORDER.includes(pref) ? pref : "" });
+  }
+  return rows;
+}
+/* 画像zip → 番号ごとの画像データ（フォルダ名の番号で対応。番号がなければファイル名で対応） */
+function bulkMapImages(entries){
+  const byNum = {}, byName = {};
+  for (const f of entries){
+    const path = f.path || f.name;
+    if (/__MACOSX\//.test(path) || /(^|\/)\._/.test(path)) continue;
+    if (!/\.(jpe?g|png|heic|webp)$/i.test(path)) continue;
+    const m = path.match(/(?:^|\/)(\d+)\.[^\/]*\/[^\/]+$/);
+    if (m) byNum[Number(m[1])] = f.data;
+    byName[norm(f.name.replace(/\.[^.]+$/,""))] = f.data;
+  }
+  return { byNum, byName };
+}
+function bulkB64ToBuf(dataUrl){
+  const bin = atob(dataUrl.slice(dataUrl.indexOf(",")+1));
+  const u = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return u.buffer;
+}
+let bulkCanvas = null;
+async function bulkMakeImage(u8){
+  let src = null;
+  const blob = new Blob([u8], { type:"image/jpeg" });
+  if (typeof createImageBitmap === "function"){ try{ src = await createImageBitmap(blob); }catch(e){} }
+  if (!src) src = await decodeViaImg(bytesToDataURL(u8, "image/jpeg"));
+  const w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
+  /* 3:2で中央を切り抜き（ARCHIVEのカードと同じ見え方） */
+  let sx = 0, sy = 0, sw = w, sh = h;
+  if (w/h > 1.5){ sw = Math.round(h*1.5); sx = Math.round((w-sw)/2); }
+  else { sh = Math.round(w/1.5); sy = Math.round((h-sh)/2); }
+  if (!bulkCanvas) bulkCanvas = document.createElement("canvas");
+  const c = bulkCanvas;
+  c.width = 1080; c.height = 720;
+  c.getContext("2d").drawImage(src, sx, sy, sw, sh, 0, 0, 1080, 720);
+  if (src.close) src.close();
+  let out = c.toDataURL("image/jpeg", 0.8);
+  for (const q of [0.7, 0.6, 0.5]){ if (out.length < 340000) break; out = c.toDataURL("image/jpeg", q); }
+  return bulkB64ToBuf(out);
+}
+async function bulkSelect(files){
+  for (const f of Array.from(files || [])){
+    if (/\.csv$/i.test(f.name) || f.type==="text/csv") bulkFiles.csv = f;
+    else if (/\.zip$/i.test(f.name) || /zip/.test(f.type||"")) bulkFiles.zip = f;
+  }
+  if (!bulkFiles.csv && !bulkFiles.zip){ bulkMsg("CSVファイルと画像zipを選んでください"); return; }
+  if (!bulkFiles.csv){ bulkMsg(`画像zip（${bulkFiles.zip.name}）を読み込みました。続けてCSVを選んでください`); return; }
+  if (!bulkFiles.zip){ bulkMsg(`CSV（${bulkFiles.csv.name}）を読み込みました。続けて画像zipを選んでください`); return; }
+  await bulkRun();
+}
+async function bulkRun(){
+  const files = bulkFiles;
+  bulkFiles = { csv:null, zip:null };
+  let rows, imgs;
+  try{
+    bulkMsg("ファイルを読み込んでいます…");
+    rows = bulkParseCSV(await files.csv.text());
+    if (!rows.length) throw new Error("CSVに登録できる行がありませんでした");
+    let entries;
+    try{ entries = await readZip(await files.zip.arrayBuffer()); }
+    catch(e){ throw new Error("画像zipを展開できませんでした（iOS 16.4以降が必要です）"); }
+    imgs = bulkMapImages(entries);
+  }catch(e){ bulkMsg(e && e.message ? e.message : "読み込みに失敗しました"); return; }
+
+  await xReady;
+  const have = new Set(aItems.map((x)=>norm(x.name)));
+  const todo = [], skipped = [];
+  for (const r of rows){
+    const k = norm(r.name);
+    if (have.has(k)){ skipped.push(r); continue; }
+    have.add(k);
+    todo.push(r);
+  }
+  const withImg = todo.filter((r)=>imgs.byNum[r.n] || imgs.byName[norm(r.name)]).length;
+  if (!todo.length){ bulkMsg(`追加できる施設はありません（${skipped.length}件はすでにARCHIVEに登録済み）`); return; }
+  const yes = await showConfirm(
+    `ARCHIVEに${todo.length}件を追加します<br><span style="font-size:12px;color:var(--paper-dim);">写真あり${withImg}件${skipped.length ? `／登録済みの${skipped.length}件はスキップ` : ""}<br>現在の登録内容は上書きされません。<br>完了まで画面を閉じずにお待ちください</span>`,
+    "登録する", "戻る");
+  if (!yes){ bulkMsg("一括アップロードを中止しました"); return; }
+
+  /* 処理中は画面がスリープしないようにする（対応端末のみ） */
+  let lock = null;
+  try{ if (navigator.wakeLock) lock = await navigator.wakeLock.request("screen"); }catch(e){}
+  const base = Date.now();
+  let done = 0, imgFail = 0;
+  try{
+    for (let i=0;i<todo.length;i++){
+      const r = todo[i];
+      xBusy_(true, `ARCHIVEに登録しています<br>${i+1} / ${todo.length}`);
+      const raw = imgs.byNum[r.n] || imgs.byName[norm(r.name)] || null;
+      let img = null;
+      if (raw){ try{ img = await bulkMakeImage(raw); }catch(e){ imgFail++; } }
+      const it = { id:xNewId(), name:r.name, pref:r.pref, star:0, img, at:base + i };
+      await idbSet(ARC_PREFIX+it.id, it);
+      aItems.push(it);
+      done++;
+    }
+  }catch(e){
+    storageOK = false; showBanner();
+  }finally{
+    xBusy_(false);
+    try{ if (lock) await lock.release(); }catch(e){}
+    bulkCanvas = null;
+  }
+  aItems.sort((a,b)=>a.at-b.at);
+  render();
+  bulkMsg(done===todo.length
+    ? `ARCHIVEに${done}件を登録しました${skipped.length ? `（登録済み${skipped.length}件はスキップ）` : ""}${imgFail ? `／写真を読み込めなかった${imgFail}件は写真なしで登録` : ""}`
+    : `${done} / ${todo.length}件で中断しました。同じ2ファイルをもう一度選ぶと続きから登録できます`);
+}
+document.addEventListener("change", (ev)=>{
+  if (!ev.target.classList || !ev.target.classList.contains("js-bulk")) return;
+  const files = ev.target.files;
+  bulkSelect(files).finally(()=>{ ev.target.value = ""; });
+});
+/* ===================== 一括アップロード（ここまで） ===================== */
 
 /* ---------------- スワイプ操作 ----------------
    ・左→右スワイプで前の画面へ戻る（進む操作はなし）

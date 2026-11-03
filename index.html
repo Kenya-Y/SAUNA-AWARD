@@ -535,6 +535,113 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
   padding:10px 18px;font-size:12px;letter-spacing:.06em;white-space:nowrap;
 }
 #x-toast.show{opacity:1;}
+/* =====================================================================
+   DASHBOARD（ver3.5〜）— リプレイ風レイアウトを黒×金のデザインで
+   ===================================================================== */
+.d2{
+  position:relative;min-height:100vh;overflow-x:hidden;
+  margin-top:calc(-1 * env(safe-area-inset-top));
+  padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 64px);
+}
+/* 上部の水色のグラデーション（水風呂を思わせる色。下に向かって黒へ溶ける） */
+.d2-glow{
+  position:absolute;left:0;right:0;top:0;height:620px;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(10,9,8,0) 0%, rgba(10,9,8,0) 42%, rgba(10,9,8,.75) 72%, #0A0908 100%),
+    radial-gradient(75% 55% at 62% 0%, #3E9FE0 0%, rgba(62,159,224,0) 72%),
+    radial-gradient(60% 50% at 100% 28%, #8FD6F6 0%, rgba(143,214,246,0) 72%),
+    radial-gradient(70% 55% at 0% 18%, rgba(84,176,232,.75) 0%, rgba(84,176,232,0) 72%),
+    linear-gradient(180deg, #1A4B70 0%, #0E2436 60%, #0A0908 100%);
+}
+.d2 > :not(.d2-glow){position:relative;z-index:1;}
+.d2-hdr{padding:12px 20px 0;}
+.d2-hdr .back{color:rgba(255,255,255,.8);}
+.d2-titlerow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px 0;}
+.d2-title{margin:0;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;font-size:40px;letter-spacing:-.015em;color:#fff;}
+.d2-year{position:relative;display:inline-flex;align-items:center;flex:none;}
+.d2-year select{
+  -webkit-appearance:none;appearance:none;color-scheme:dark;cursor:pointer;
+  background:rgba(0,0,0,.26);border:none;border-radius:999px;color:#fff;
+  font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:600;font-size:18px;
+  padding:10px 44px 10px 22px;
+}
+.d2-year select:focus{outline:2px solid rgba(255,255,255,.5);outline-offset:2px;}
+.d2-year svg{position:absolute;right:16px;width:18px;height:18px;color:#fff;pointer-events:none;}
+.d2-stmt{
+  margin:38px 20px 0;color:rgba(255,255,255,.5);
+  font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:800;
+  font-size:clamp(30px,8.6vw,44px);line-height:1.22;letter-spacing:-.01em;
+}
+.d2-stmt b{color:#fff;font-weight:800;}
+.d2-sub{margin:12px 20px 0;font-size:13px;color:rgba(255,255,255,.62);letter-spacing:.06em;}
+.d2-sub b{color:#fff;font-weight:700;}
+.d2-sec{margin-top:46px;}
+.d2-h{margin:0 20px 14px;font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:800;font-size:22px;color:#fff;letter-spacing:-.005em;}
+.d2-cards{
+  display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;
+  padding:0 20px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+}
+.d2-cards::-webkit-scrollbar{display:none;}
+.d2-card{
+  position:relative;flex:none;width:68vw;max-width:300px;aspect-ratio:3/4;border-radius:22px;overflow:hidden;
+  scroll-snap-align:start;scroll-margin-left:20px;background:#1d1915;box-shadow:0 12px 30px rgba(0,0,0,.45);
+}
+.d2-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.d2-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 52%,rgba(0,0,0,.72) 100%);}
+.d2-noimg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#4a301d,#15110d);color:var(--gold);}
+.d2-noimg svg{width:56px;height:56px;opacity:.55;}
+.d2-rank{position:absolute;z-index:1;left:20px;top:12px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;font-size:76px;line-height:1;letter-spacing:-.03em;color:#fff;}
+.d2-cap{position:absolute;z-index:1;left:14px;right:14px;bottom:20px;text-align:center;color:#fff;}
+.d2-cap b{display:block;font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:700;font-size:18px;line-height:1.35;}
+.d2-cap span{display:block;margin-top:4px;font-size:14px;color:rgba(255,255,255,.86);}
+.d2-list{margin:0 20px;}
+.d2-row{display:flex;align-items:center;gap:14px;}
+.d2-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;background:#1d1915;display:flex;align-items:center;justify-content:center;color:var(--gold);}
+.d2-thumb svg{width:22px;height:22px;opacity:.6;}
+.d2-rbody{flex:1;min-width:0;display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);}
+.d2-rn{width:24px;flex:none;text-align:center;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:700;font-size:20px;color:#fff;}
+.d2-rtext{min-width:0;}
+.d2-rname{font-size:16px;font-weight:500;color:#fff;line-height:1.4;word-break:break-word;}
+.d2-rsub{font-size:13px;color:rgba(255,255,255,.5);margin-top:2px;}
+.d2-panel{margin:0 20px;background:#141210;border:1px solid var(--line);border-radius:22px;padding:18px 16px 8px;}
+.d2-map{min-height:140px;display:flex;align-items:center;justify-content:center;}
+.d2-map svg.d2-jp{width:100%;height:auto;display:block;}
+.d2-jp path{stroke:#0A0908;stroke-width:.6px;vector-effect:non-scaling-stroke;stroke-linejoin:round;}
+.d2-jp .d2-jpframe{fill:none;stroke:rgba(255,255,255,.2);stroke-width:1px;}
+.d2-maploading{font-size:12px;color:rgba(255,255,255,.45);text-align:center;line-height:1.8;margin:36px 10px;}
+.d2-credit{font-size:9px;color:rgba(255,255,255,.28);text-align:right;margin:6px 2px 0;letter-spacing:.02em;}
+.d2-yscroll{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;}
+.d2-yscroll::-webkit-scrollbar{display:none;}
+/* 左に過去の年が続いていることを、左端を少しぼかして示す */
+.d2-yscroll.many{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 22px);mask-image:linear-gradient(90deg,transparent 0,#000 22px);}
+.d2-ycols{display:flex;align-items:flex-end;height:220px;}
+.d2-ycol{flex:0 0 20%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;scroll-snap-align:start;padding:0 5px;box-sizing:border-box;}
+.d2-ycols.few .d2-ycol{flex:1 1 0;}
+.d2-ycol .v{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:12px;color:#fff;margin-bottom:6px;}
+.d2-ycol .v.zero{color:rgba(255,255,255,.3);}
+.d2-ycol i{display:block;width:64%;max-width:46px;border-radius:7px 7px 2px 2px;background:var(--gold-grad);}
+.d2-ycol i.zero{background:rgba(255,255,255,.12);}
+.d2-ycol .yl{margin-top:9px;font-size:11px;color:rgba(255,255,255,.5);}
+.d2-ycol .yl.cur{color:var(--gold);font-weight:700;}
+.d2-maplegend{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,.55);margin:14px 2px 6px;}
+.d2-maplegend b{color:var(--gold);font-size:15px;margin:0 2px;}
+.d2-top3{list-style:none;margin:6px 0 0;padding:0;}
+.d2-top3 li{display:flex;align-items:baseline;gap:14px;padding:12px 2px;border-top:1px solid var(--line);}
+.d2-top3 .n{width:18px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;font-size:18px;color:var(--gold);}
+.d2-top3 .p{flex:1;font-size:16px;font-weight:700;color:#fff;}
+.d2-top3 .c{font-size:14px;color:rgba(255,255,255,.7);}
+.d2-chart{padding-bottom:16px;}
+.d2-bars{display:flex;align-items:flex-end;gap:6px;height:190px;}
+.d2-bar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+.d2-bar .v{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:11px;color:#fff;margin-bottom:5px;}
+.d2-bar .v.zero{color:rgba(255,255,255,.3);}
+.d2-bar i{display:block;width:100%;max-width:30px;border-radius:6px 6px 2px 2px;background:var(--gold-grad);}
+.d2-bar i.zero{background:rgba(255,255,255,.12);}
+.d2-blabels{display:flex;gap:6px;margin-top:8px;}
+.d2-blabels span{flex:1;min-width:0;text-align:center;font-size:10px;color:rgba(255,255,255,.5);white-space:nowrap;}
+.d2-blabels span.cur{color:var(--gold);font-weight:700;}
+.d2-empty{margin:0 20px;padding:24px 16px;border:1px dashed rgba(255,255,255,.18);border-radius:18px;text-align:center;font-size:13px;color:rgba(255,255,255,.5);line-height:1.9;}
+
 </style>
 </head>
 <body>
@@ -551,11 +658,12 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 "use strict";
 
 /* ============================================================
-   SAUNA AWARD ver3.4 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
-   メニュー: DAIALY / ARCHIVE / AWARD / 設定
+   SAUNA AWARD ver3.5 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
+   メニュー: DAIALY / ARCHIVE / AWARD / DASHBOARD / 設定
    ・AWARD  : Tier1〜3に各7施設（和名はARCHIVEから選択 / ローマ字 / Address / URL / 画像 / ミニ写真）
    ・DAIALY : 行ったサウナをカレンダーで記録（ARCHIVEの施設から選択）
    ・ARCHIVE: 行ったサウナを登録・検索・一覧表示
+   ・DASHBOARD: DAIALYの記録を合計・年ごとに集計して表示（データは保存せず、その都度集計）
    ・永続化: IndexedDB "sauna-award"（全機能共通）。画像はすべてJPEGのバイナリで保存（ver3.2〜）
    ・バックアップ: AWARD・DAIALY・ARCHIVE・背景をまとめてzipで保存／復元
    ============================================================ */
@@ -568,7 +676,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 50;   /* 施設名の上限（ARCHIVE・AWARD共通） */
 const MAX_DATAURL = 1400000;
-const APP_VER = "3.4";
+const APP_VER = "3.5";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -1386,6 +1494,7 @@ function homeHTML(){
       <button class="btn" data-x="open-daialy">Daialy</button>
       <button class="btn" data-x="open-archive">Archive</button>
       <button class="btn" data-go="tiers">Award</button>
+      <button class="btn" data-x="open-dash">Dashboard</button>
       <button class="btn" data-go="settingsTiers" style="border-color:var(--line);color:var(--paper-dim);">設定</button>
     </div>
   </div>`;
@@ -2268,7 +2377,7 @@ const xReady = (async ()=>{
 })();
 
 /* ---------------- 状態 ---------------- */
-const X_VIEWS = ["daialy","dreg","archive","adetail","areg"];
+const X_VIEWS = ["daialy","dreg","archive","adetail","areg","dash"];
 function xIsView(v){ return X_VIEWS.indexOf(v) >= 0; }
 const xToday0 = new Date();
 const xs = {
@@ -2570,7 +2679,7 @@ function aRegHTML(){
    描画（本体のrender()から呼ばれる）
    ================================================================ */
 function xRender(){
-  if (view==="archive" || view==="adetail") ensureAward();
+  if (view==="archive" || view==="adetail" || view==="dash") ensureAward();
   const key = view + (view==="daialy" ? ":"+xs.mode : "");
   const anim = key!==xLastKey ? "x-fade" : "";
   xLastKey = key;
@@ -2587,6 +2696,7 @@ function xRender(){
   if (view==="dreg") html = dRegHTML();
   else if (view==="archive") html = aPageHTML();
   else if (view==="adetail") html = aDetailHTML();
+  else if (view==="dash") html = dashHTML();
   else if (view==="areg") html = aRegHTML();
   return `<div class="${anim}">${html}</div>`
     + (view==="archive" ? `<button class="x-fab" data-x="a-add" aria-label="サウナを登録">${XI.plus}</button>` : "");
@@ -3018,7 +3128,7 @@ function ensureAward(){
   if ([1,2,3].every((t)=>cache[t])) return Promise.resolve();
   if (!awardLoading){
     awardLoading = Promise.all([1,2,3].map(async (t)=>{ if (!cache[t]) cache[t] = await loadTier(t); }))
-      .then(()=>{ awardLoading = null; if (view==="archive" || view==="adetail") xRerenderKeep(); });
+      .then(()=>{ awardLoading = null; if (view==="archive" || view==="adetail" || view==="dash") xRerenderKeep(); });
   }
   return awardLoading;
 }
@@ -3068,7 +3178,7 @@ async function awardGoNewSauna(slot, prefill){
 }
 
 function xBack(){
-  if (view==="daialy" || view==="archive") go("home");
+  if (view==="daialy" || view==="archive" || view==="dash") go("home");
   else if (view==="dreg") dCancel();
   else if (view==="adetail") xShow("archive", xs.aY);
   else if (view==="areg") aCancel();
@@ -3088,6 +3198,7 @@ document.addEventListener("click", (ev)=>{
       if (xs.mode==="list") dScrollToSel(false);
       return;
     case "open-archive": xShow("archive"); return;
+    case "open-dash": xShow("dash"); return;
 
     /* DAIALY */
     case "d-today": {
@@ -3200,6 +3311,7 @@ document.addEventListener("keydown", (ev)=>{
 document.addEventListener("change", async (ev)=>{
   if (ev.target.id==="x-date"){ dCaptureDate(); return; }
   if (ev.target.id==="x-sort"){ aSort = ev.target.value; xRerenderKeep(); return; }
+  if (ev.target.id==="x-dyear"){ xs.dashYear = ev.target.value==="all" ? "all" : Number(ev.target.value); render(); window.scrollTo(0,0); return; }
   if (ev.target.id!=="x-aimg") return;
   const file = ev.target.files && ev.target.files[0];
   ev.target.value = "";
@@ -3212,6 +3324,273 @@ document.addEventListener("change", async (ev)=>{
   }catch(e){ xToast("この画像は読み込めませんでした"); }
 });
 
+
+
+/* =====================================================================
+   DASHBOARD（ver3.5〜）
+   ---------------------------------------------------------------------
+   ・集計元はDAIALYの記録。期間は「合計（2020年1月〜今日）」または「年（1月〜12月）」
+   ① その期間に行った施設の数（とのべ回数）
+   ② あなたのトップサウナ: 回数の多い順（合計は10位まで、年は3位まで）
+      同じ回数のときは TIER I → TIER II → TIER III（各TierはAWARDの1〜7の順）
+      → 星あり → 星なし（それぞれ登録順）
+   ③ ②の結果を施設名・回数つきのリストで表示
+   ④ あなたのサウナ分布: 行った都道府県を日本地図で表示＋上位3都道府県
+   ⑤ 年: 月ごとの回数 / 合計: 年ごとの回数（2020年〜今年）を棒グラフで表示
+   ===================================================================== */
+const DASH_FROM_YEAR = 2020;
+
+const dashNow = new Date();
+xs.dashYear = "all";                          /* 初期表示は合計。数値=その年 */
+
+function dashRange(){
+  if (xs.dashYear==="all") return [`${DASH_FROM_YEAR}-01-01`, ymd(new Date())];
+  return [`${xs.dashYear}-01-01`, `${xs.dashYear}-12-31`];
+}
+function dashEntries(){
+  const [a,b] = dashRange();
+  return dEntries.filter((e)=>e.date>=a && e.date<=b);
+}
+const dashPrefFromShort = (s)=>!s ? "" : (PREF_ORDER.find((p)=>p===s || shortPref(p)===s) || "");
+/* 施設ごとの回数（ARCHIVEにない記録は施設名ごとにまとめる） */
+function dashCount(list){
+  const map = new Map();
+  for (const e of list){
+    const it = aOf(e.sid);
+    const k = it ? it.id : "n:" + (e.name || "（施設名なし）");
+    const cur = map.get(k) || { k, it, name: it ? it.name : (e.name || "（施設名なし）"), loc: it ? "" : (e.loc||""), c:0 };
+    cur.c++;
+    map.set(k, cur);
+  }
+  return Array.from(map.values());
+}
+/* 同じ回数のときの順番: TIER I→II→III（AWARDの1〜7の順）→ 星あり → 星なし（登録順）*/
+function dashRanking(list){
+  const pos = {};
+  for (const T of TIERS){
+    (cache[T.id]||[]).forEach((e,i)=>{ const sid = awardSidOf(e); if (sid && pos[sid]===undefined) pos[sid] = T.id*10 + i; });
+  }
+  const tie = (r)=>{
+    if (!r.it) return [3, 0];
+    if (pos[r.it.id]!==undefined) return [0, pos[r.it.id]];
+    return [r.it.star>0 ? 1 : 2, r.it.at];
+  };
+  return dashCount(list).sort((a,b)=>{
+    if (b.c!==a.c) return b.c - a.c;
+    const ta = tie(a), tb = tie(b);
+    return ta[0]-tb[0] || ta[1]-tb[1];
+  });
+}
+function dashPrefCounts(list){
+  const cnt = {};
+  for (const e of list){
+    const it = aOf(e.sid);
+    const p = it ? it.pref : dashPrefFromShort(e.loc);
+    if (p) cnt[p] = (cnt[p]||0) + 1;
+  }
+  return cnt;
+}
+const dashFmt = (n)=>Number(n).toLocaleString("ja-JP");
+
+/* ④ 日本地図
+   ・ご提供の日本地図の画像から、都道府県ごとの輪郭を抽出して作った地図データ（アプリ内に内蔵・約15KB）
+   ・インターネット接続は不要。都道府県名は表示しない
+   ・沖縄県は元の画像に含まれないため、左上に挿入図として表示（本島・久米島・宮古島・石垣島・西表島）
+   ・キーは都道府県コード（1〜47）。PREF_ORDER の並びと同じ */
+const JP_MAP = {
+  vb: "20 24 874 842",
+  frame: "M26 36H270V214H26Z",
+  d: {
+  1:"M850 120 846 118 840 121 839 128 840 128 842 128 848 126 850 124ZM850 98 848 96 844 97 844 92 842 92 830 94 828 99 818 106 816 118 809 124 804 134 810 136 812 135 815 130 816 127 830 116 835 109 840 106 848 100ZM631 46 630 46 623 53 626 58 628 60 631 59 632 56 633 46 631 46ZM622 41 616 44 618 49 620 49 624 44 624 43ZM802 104 800 104 776 126 769 127 762 126 756 118 754 118 754 122 751 124 749 122 749 116 747 114 742 116 735 116 732 114 730 111 714 102 702 92 693 82 684 70 670 46 658 34 656 35 655 38 647 38 645 45 642 50 642 53 652 74 651 98 650 102 646 106 647 123 632 138 638 152 638 158 628 172 622 171 618 168 615 168 610 172 608 172 597 161 592 160 590 162 589 164 599 178 590 186 588 192 583 190 578 199 571 198 570 200 570 216 570 218 566 220 571 226 584 237 582 244 575 256 575 260 578 267 580 270 583 270 594 264 596 262 594 258 594 256 606 246 610 250 618 254 624 248 624 244 616 241 610 232 604 232 596 229 588 220 588 212 596 202 608 202 618 217 620 217 624 211 629 206 644 200 648 200 656 204 660 208 666 210 682 220 686 223 691 225 698 225 710 238 714 234 716 214 716 212 730 196 748 180 754 181 756 178 760 180 762 184 776 184 776 178 780 180 782 182 783 182 785 179 788 178 794 172 809 170 811 168 812 164 813 163 820 160 820 158 811 158 806 164 801 164 796 154 796 151 800 148 800 146 797 146 788 137 788 134 802 108ZM888 30 884 30 880 38 876 42 874 40 874 37 872 37 870 39 871 44 866 52 858 60 854 62 854 69 856 76 854 82 854 88 853 91 856 91 858 90 862 83 864 72 874 66 875 56 881 50 886 40 888 35Z",
+  2:"M635 268 634 268 632 272 628 272 618 263 614 264 612 266 610 274 610 282 617 282 624 280 627 280 629 282 624 293 625 297 624 298 616 292 614 292 611 299 610 300 605 302 604 300 604 290 601 280 600 280 597 281 591 280 588 284 591 292 586 304 584 306 576 306 570 316 574 324 576 324 582 322 593 321 596 322 596 325 599 326 614 322 616 324 613 332 613 336 636 326 646 326 647 324 636 312 634 304 633 296 636 288 636 284 635 282 636 274Z",
+  3:"M648 325 646 326 639 326 634 327 612 337 612 349 608 358 608 363 610 366 603 376 604 380 610 389 609 394 607 398 608 401 608 402 622 405 626 412 630 412 638 408 642 408 645 404 651 401 657 396 656 384 659 382 659 379 662 372 658 365 658 352 654 344 653 338 654 332Z",
+  4:"M640 408 638 408 630 413 626 413 622 406 608 403 597 410 602 417 601 420 598 423 601 432 595 438 595 442 597 446 596 448 589 453 586 457 600 458 604 460 606 462 607 465 608 465 614 462 614 454 616 448 618 440 623 435 627 433 631 433 640 442 643 442 644 440 640 435 638 430 638 418 640 412Z",
+  5:"M614 322 599 326 596 326 595 322 593 322 587 322 576 325 577 328 577 334 574 340 574 344 572 348 564 349 562 351 562 354 566 358 570 354 574 354 578 362 578 366 577 370 578 378 576 383 570 386 570 394 572 394 584 398 588 398 592 400 594 402 597 409 607 403 608 401 606 398 608 394 609 389 604 380 602 376 610 366 608 363 608 358 611 349 612 332 615 324Z",
+  6:"M570 395 570 401 566 408 566 415 562 418 558 419 556 420 556 426 554 427 560 427 564 436 571 436 572 438 560 451 560 456 563 466 566 466 570 464 574 464 580 469 586 468 588 466 586 456 596 447 594 442 594 438 600 432 598 423 600 420 602 417 596 410 595 406 592 400 588 398 584 398 572 395Z",
+  7:"M618 468 614 463 607 466 606 462 604 460 594 458 586 458 588 464 588 466 588 468 582 470 580 470 574 465 570 465 566 467 562 466 560 468 558 478 556 482 544 484 542 486 544 491 541 494 544 502 544 506 549 510 552 511 573 498 578 498 593 518 596 517 600 512 603 512 608 516 612 512 618 509 619 506 619 474Z",
+  8:"M603 512 600 512 596 518 593 518 588 512 587 512 587 518 584 520 585 538 578 540 562 549 572 562 582 568 586 568 590 567 591 568 596 562 602 565 604 565 598 550 598 544 600 536 604 532 604 528 608 521 610 518Z",
+  9:"M578 498 573 499 555 510 550 512 550 526 552 529 551 542 561 548 564 548 578 540 583 538 585 537 584 520 586 518 586 510Z",
+  10:"M544 506 534 506 531 510 528 515 525 520 522 521 514 522 510 526 508 532 507 534 510 538 518 536 520 538 520 542 516 548 516 550 520 554 518 557 520 560 521 563 522 563 524 560 527 556 536 554 538 546 540 544 544 544 554 550 560 548 550 542 552 529 549 526 550 511 546 510Z",
+  11:"M522 564 522 566 526 568 532 568 538 564 550 571 554 572 558 570 569 570 570 565 572 561 560 548 558 550 554 550 544 545 540 544 538 546 536 554 527 556Z",
+  12:"M604 566 602 566 596 562 591 568 590 568 584 568 572 562 571 563 570 565 570 569 572 573 574 578 578 578 580 582 568 593 570 596 570 607 566 611 564 612 570 618 575 613 576 610 580 606 586 604 590 604 594 603 594 600 593 598 592 588 598 579 602 577 609 576 610 573 610 572 606 569Z",
+  13:"M532 568 532 573 535 575 538 575 540 576 540 579 546 584 557 580 562 582 564 586 566 580 568 578 573 578 570 570 558 570 554 572 552 572 538 564Z",
+  14:"M532 587 531 590 536 594 534 603 536 606 538 606 540 602 544 598 552 594 554 594 556 596 557 600 560 605 564 602 563 598 560 594 560 590 562 586 564 586 562 583 557 580 546 584 540 580 538 584Z",
+  15:"M504 450 498 456 498 459 501 462 498 469 500 474 505 472 511 467 514 459 514 458 512 458 510 456 508 456 506 452ZM571 437 564 436 560 428 556 428 554 427 554 434 551 450 536 459 534 459 526 464 524 476 518 484 516 487 514 490 508 490 504 499 495 498 487 506 478 506 476 509 480 512 478 514 480 518 482 520 485 514 488 512 490 512 495 516 498 516 505 512 511 506 513 506 517 510 519 520 522 520 526 518 530 510 534 506 543 506 544 502 540 494 543 491 542 486 544 483 552 482 557 480 560 468 562 466 560 459 560 451 561 448 570 440 572 438Z",
+  16:"M476 508 472 508 468 512 465 518 460 522 458 522 452 520 450 516 450 510 446 510 445 512 444 518 440 524 440 526 441 538 443 542 446 542 449 546 451 545 457 534 464 534 467 538 474 537 480 531 482 526 482 521 478 516 479 512Z",
+  17:"M462 480 458 481 446 487 441 488 438 490 436 500 438 504 437 508 440 512 438 518 432 523 431 530 429 534 420 543 418 544 422 553 431 552 438 556 439 556 440 544 442 542 440 533 439 526 440 524 444 518 445 512 446 510 450 510 451 502 449 502 445 502 443 500 443 499 446 496 450 496 456 494 456 491 464 485 464 483Z",
+  18:"M444 566 437 558 437 556 431 552 422 554 420 552 418 545 412 548 410 552 410 556 404 560 408 565 409 568 408 576 405 574 403 580 400 578 396 583 392 584 387 584 384 588 386 589 396 592 400 592 404 585 413 582 414 575 415 574 421 574 424 570 439 570 442 570Z",
+  19:"M512 561 502 565 502 570 498 574 500 578 500 584 502 586 502 590 508 594 508 596 510 598 513 598 514 598 514 592 514 590 517 589 520 594 522 594 523 592 530 591 532 586 538 584 540 581 540 578 538 576 535 576 532 573 531 568 526 568 522 566 518 566 514 562Z",
+  20:"M513 506 511 506 505 512 498 517 495 517 490 512 488 512 482 521 481 530 474 536 475 540 478 543 473 546 474 550 472 554 474 557 474 558 463 568 471 576 472 580 470 582 476 588 472 596 473 599 483 600 489 594 496 592 498 587 500 585 500 578 498 573 501 570 502 564 512 560 518 566 519 566 521 565 520 560 518 557 519 554 516 550 516 548 519 542 520 538 518 537 510 538 506 534 510 526 514 522 518 520 516 510Z",
+  21:"M474 538 467 538 464 535 457 534 451 546 449 546 444 542 443 542 440 544 440 554 438 558 444 567 442 570 439 571 424 570 422 572 422 576 427 586 428 590 424 596 424 600 430 597 436 602 436 592 438 592 443 592 448 588 457 598 461 596 466 596 468 599 471 598 476 588 470 582 471 580 470 576 462 568 474 558 474 557 471 554 473 550 472 546 477 543Z",
+  22:"M470 618 471 626 472 626 475 624 476 628 479 630 487 627 493 627 502 630 501 628 500 624 505 617 506 614 512 612 514 606 516 604 528 605 528 608 523 614 522 626 525 630 528 631 540 618 542 613 538 608 538 606 536 606 534 604 534 600 535 594 531 591 528 592 523 592 522 594 520 594 516 590 514 592 514 598 512 599 508 596 508 594 502 590 502 586 500 586 496 593 491 594 483 601 480 601 481 612Z",
+  23:"M448 588 443 593 441 592 437 592 437 602 436 603 440 608 442 609 442 612 442 617 442 620 442 624 447 628 450 626 447 620 448 619 452 624 454 624 456 622 459 620 462 622 462 624 460 626 456 628 452 630 451 632 452 634 456 634 464 629 470 629 472 627 470 622 469 618 478 613 480 612 480 604 479 600 473 600 472 598 470 598 468 600 466 596 461 596 457 598Z",
+  24:"M430 598 425 600 425 608 424 614 420 616 412 618 410 620 410 633 412 634 417 634 418 634 419 636 412 642 412 658 405 662 401 668 402 672 408 676 410 674 410 670 414 665 418 664 420 654 422 652 424 650 431 650 434 645 436 646 442 651 443 650 443 644 444 641 444 638 436 636 428 630 430 624 433 618 433 614 439 608 436 604Z",
+  25:"M421 575 415 574 414 582 411 584 404 586 400 592 398 600 400 606 398 614 400 616 404 620 410 620 414 616 422 616 424 614 425 602 424 598 428 590ZM414 587 416 590 418 594 413 598 408 604 406 602 404 612 403 612 402 610 404 598 408 595Z",
+  26:"M360 576 360 584 366 584 367 586 366 590 360 594 361 596 373 602 380 604 382 608 382 612 392 613 394 616 396 623 410 626 410 620 404 620 402 619 398 614 400 608 398 600 400 592 396 592 386 590 384 588 387 583 386 580 384 578 382 580 380 582 376 581 376 579 378 578 380 578 381 575 376 571 372 571 367 575Z",
+  27:"M391 613 382 613 382 620 382 626 384 628 381 633 380 638 373 643 374 644 380 644 382 646 386 642 394 642 395 620 393 614Z",
+  28:"M363 632 361 632 352 641 352 646 354 650 356 649 360 646 360 640 364 634ZM344 576 340 580 339 586 345 590 346 593 344 596 340 599 340 601 338 607 334 609 336 622 336 624 339 625 344 622 358 622 366 630 382 625 382 620 381 613 382 608 380 605 373 602 360 594 361 592 365 590 366 586 366 584 360 584 359 576Z",
+  29:"M396 624 394 634 395 648 390 652 390 656 392 666 394 668 401 668 405 662 412 658 412 642 417 638 418 636 417 634 414 635 411 634 409 632 409 626Z",
+  30:"M372 644 368 648 370 650 373 652 370 656 372 660 370 666 373 670 379 674 378 680 382 683 393 689 398 688 406 684 408 677 401 672 400 668 394 668 392 666 391 664 390 652 394 648 394 642 386 642 382 646 380 645 374 645Z",
+  31:"M345 590 338 586 340 580 336 581 330 586 328 586 321 584 320 584 321 587 320 588 312 585 304 585 294 590 296 594 294 596 288 602 286 606 287 608 291 609 310 594 312 595 316 598 321 596 328 596 329 598 330 602 332 604 342 598 344 594Z",
+  32:"M294 582 283 584 276 584 264 590 266 594 248 608 238 620 228 629 225 636 228 640 228 644 231 645 236 645 242 643 243 640 242 633 244 626 248 621 255 620 260 622 264 622 270 618 271 617 270 615 270 612 270 609 272 607 286 608 286 606 286 603 289 600 294 596 295 594 294 591 295 589 294 588ZM302 562 301 560 297 561 295 563 298 566 300 565ZM301 548 297 550 296 552 298 556 302 558 304 557 306 550Z",
+  33:"M340 600 331 604 330 602 329 598 328 597 321 596 316 599 312 596 310 595 292 608 291 610 292 616 296 619 296 621 296 627 300 633 302 638 306 640 306 637 308 636 312 640 316 641 318 640 322 635 336 624 336 622 334 609 337 607Z",
+  34:"M290 610 288 608 272 608 270 612 270 615 272 618 270 620 262 623 255 621 248 622 245 626 242 633 244 640 243 643 246 652 247 652 252 646 258 642 260 646 259 648 260 650 264 654 274 646 276 646 279 648 282 648 287 640 290 640 296 642 301 638 300 633 295 627 296 624 296 619 292 616Z",
+  35:"M250 661 246 656 246 652 245 652 243 644 236 646 231 646 228 644 228 640 224 636 228 628 226 626 222 627 219 630 218 636 207 644 200 639 196 642 192 646 192 649 194 652 192 656 192 662 194 665 198 661 204 664 206 667 210 664 219 662 225 658 226 658 238 668 241 670 247 666 250 663Z",
+  36:"M353 672 352 669 351 664 348 658 348 655 350 654 351 652 347 648 344 648 342 652 338 654 333 654 327 659 323 656 319 655 306 662 309 663 310 666 317 674 322 670 324 670 328 674 330 682 332 684 336 685 338 681 346 673Z",
+  37:"M343 648 342 650 338 649 329 643 326 645 324 645 322 644 318 644 309 648 306 651 308 654 305 658 306 662 319 654 322 654 327 658 333 653 338 654 342 652Z",
+  38:"M308 662 306 662 305 664 292 664 288 666 283 662 282 657 281 656 277 657 270 664 266 670 267 672 270 674 270 678 268 680 258 680 253 686 248 688 244 690 246 692 250 692 254 690 256 692 256 697 260 698 262 702 259 703 255 708 256 709 262 713 268 714 270 709 265 704 264 702 278 695 278 692 276 688 278 685 282 685 283 684 286 678 287 672 290 670 307 668 310 666Z",
+  39:"M336 686 332 684 330 682 329 678 324 670 322 671 317 674 310 666 304 670 288 672 287 678 284 684 282 686 278 686 276 688 278 692 278 695 265 702 266 704 270 709 270 712 268 714 268 716 265 721 284 726 284 724 278 720 280 715 282 715 282 712 284 712 286 710 284 707 290 704 292 702 290 694 294 692 298 691 300 689 304 686 311 684 318 684 322 686 326 692 328 699 330 700 333 696Z",
+  40:"M192 665 186 665 182 668 176 667 174 669 171 680 168 684 168 689 169 690 172 690 176 687 178 687 180 692 178 696 172 699 168 704 172 712 174 712 180 704 182 704 186 706 190 706 192 700 192 691 203 682 203 680 199 677 196 668Z",
+  41:"M164 679 158 681 158 688 157 690 156 690 154 688 154 685 152 684 149 684 145 686 145 688 148 692 148 696 154 700 154 702 156 704 160 706 162 706 161 704 164 702 168 704 172 698 178 695 180 692 178 688 176 688 172 690 169 690 168 689 168 684 168 682 166 680Z",
+  42:"M92 719 91 717 86 716 82 719 81 722 82 724 86 725 89 722 92 722ZM108 718 106 717 106 715 102 716 96 718 96 721 92 724 91 728 96 730 98 728 102 728 106 724ZM99 706 95 708 95 710 97 712 100 712 102 710 102 708ZM140 692 136 698 136 702 138 704 148 707 151 710 152 713 153 715 151 720 142 707 140 708 140 716 148 723 148 726 145 729 145 730 148 730 160 722 163 723 160 730 162 731 168 728 172 724 172 722 168 718 162 716 164 712 164 710 162 707 156 705 154 702 154 700ZM134 662 129 660 125 664 126 668 128 668 132 665ZM131 638 124 637 120 641 118 646 118 650 112 656 112 660 118 660 124 655 124 648Z",
+  43:"M203 700 201 700 198 704 200 709 197 712 194 712 192 710 190 706 186 707 182 705 180 705 174 712 172 712 175 718 180 722 180 726 177 728 173 730 176 734 182 730 184 732 176 740 175 742 175 748 181 754 189 758 194 753 202 752 204 751 203 748 196 736 196 734 201 730 207 722 207 710 206 704Z",
+  44:"M192 691 192 700 190 706 192 709 194 712 198 710 199 708 197 704 201 699 203 699 207 708 208 722 212 720 216 720 220 724 222 724 229 720 235 722 236 723 241 718 241 717 238 716 236 714 237 707 236 706 232 706 234 703 233 696 232 696 230 698 222 698 218 697 219 695 227 690 226 680 223 676 222 676 214 684 204 681 202 683Z",
+  45:"M235 722 229 720 222 724 220 725 216 720 212 720 208 722 202 730 197 734 197 736 204 748 204 751 202 753 194 754 189 758 189 759 194 768 193 774 194 774 197 774 200 774 210 784 212 785 212 784 216 781 215 771 218 760 224 741 230 730 236 724Z",
+  46:"M36 838 32 837 28 840 28 843 30 844 36 840ZM161 835 156 835 153 836 150 838 150 841 154 842 157 844 162 840 162 836ZM180 818 178 818 172 822 168 832 174 834 175 831 184 822 184 821 182 820ZM72 815 70 815 68 818 60 829 58 829 55 824 52 824 52 828 53 834 44 838 44 840 46 846 40 852 42 854 46 856 50 860 51 859 52 854 50 852 56 839 62 833 72 832 73 830 72 824 74 818ZM72 788 70 788 66 788 62 792 62 798 64 798 69 796ZM174 749 168 755 166 756 162 756 160 758 163 767 160 768 160 770 169 779 170 782 166 784 164 790 159 788 158 790 160 792 162 798 166 798 174 796 175 801 181 800 181 798 177 792 178 788 176 786 180 783 180 774 181 773 186 774 188 776 188 779 187 780 182 780 181 784 182 785 186 785 187 786 186 790 189 795 189 797 184 804 181 806 181 808 186 808 190 806 193 802 196 802 198 798 201 797 199 790 200 788 204 788 210 791 212 786 210 785 200 774 197 774 194 775 192 774 194 768 191 764 188 758 181 754Z",
+  47:"M238 55 244 63 241 70 237 77 231 84 225 87 219 93 214 98 218 104 210 107 204 109 203 117 200 121 195 126 189 125 189 117 191 111 195 104 192 96 199 91 204 86 205 80 202 75 207 68 214 71 221 70 227 64 233 57ZM112 101 118 98 121 104 115 107ZM169 150 179 151 192 163 182 166 175 164 171 158ZM81 199 89 201 98 192 101 178 91 185 84 189ZM47 201 60 209 70 201 65 191 52 190Z"
+  },
+};
+/* DASHBOARDのプロトタイプ（dashboard.html）が端末に残したデータを削除して容量を空ける
+   （プロトタイプ用の保存先 "sauna-award-dash-proto" と、地図の一時保存。正式版のデータには触れない） */
+try{ localStorage.removeItem("sauna-award:jpmap:v1"); }catch(e){}
+(async ()=>{
+  try{
+    if (indexedDB.databases){
+      const dbs = await indexedDB.databases();
+      if (dbs.some((d)=>d.name==="sauna-award-dash-proto")) indexedDB.deleteDatabase("sauna-award-dash-proto");
+    }
+  }catch(e){}
+})();
+/* 行った都道府県を金色に塗る（回数が多いほど濃く） */
+function dashMapHTML(cnt){
+  const max = Math.max(1, ...Object.values(cnt));
+  let shapes = "";
+  for (let code=1; code<=47; code++){
+    const c = cnt[PREF_ORDER[code-1]] || 0;
+    shapes += `<path d="${JP_MAP.d[code]}" fill="${c ? "#E2C46F" : "#2a2520"}" fill-opacity="${c ? (0.5 + 0.5*c/max).toFixed(2) : 1}"/>`;
+  }
+  return `<div class="d2-map"><svg class="d2-jp" viewBox="${JP_MAP.vb}" role="img" aria-label="行った都道府県の地図"><path class="d2-jpframe" d="${JP_MAP.frame}"/>${shapes}</svg></div>`;
+}
+/* 画面を描いた後の処理（年ごとのグラフを最新の年までスクロール） */
+function dashAfterRender(){
+  const sc = document.getElementById("d2-yscroll");
+  if (sc) sc.scrollLeft = sc.scrollWidth;
+}
+
+/* ⑤ 年ごとの棒グラフ: 一度に5年分を表示し、横スクロールで過去の年へ（初期表示は今年が右端） */
+function dashYearBarsHTML(values, labels, curIdx){
+  const max = Math.max(1, ...values);
+  const many = values.length > 5;
+  const cols = values.map((v,i)=>`
+    <div class="d2-ycol">
+      <span class="v ${v?"":"zero"}">${v}</span>
+      <i class="${v?"":"zero"}" style="height:${v ? Math.max(6, Math.round(v/max*150)) : 3}px"></i>
+      <span class="yl ${i===curIdx?"cur":""}">${labels[i]}</span>
+    </div>`).join("");
+  return `<div class="d2-yscroll no-swipe ${many?"many":""}" id="d2-yscroll"><div class="d2-ycols ${many?"":"few"}">${cols}</div></div>`;
+}
+/* ⑤ 棒グラフ */
+function dashBarsHTML(values, labels, curIdx){
+  const max = Math.max(1, ...values);
+  const bars = values.map((v)=>`
+    <div class="d2-bar"><span class="v ${v?"":"zero"}">${v}</span><i class="${v?"":"zero"}" style="height:${v ? Math.max(6, Math.round(v/max*140)) : 3}px"></i></div>`).join("");
+  const labs = labels.map((l,i)=>`<span class="${i===curIdx?"cur":""}">${l}</span>`).join("");
+  return `<div class="d2-bars">${bars}</div><div class="d2-blabels">${labs}</div>`;
+}
+
+function dashHTML(){
+  const all = xs.dashYear==="all";
+  const list = dashEntries();
+  const rank = dashRanking(list);
+  const top = rank.slice(0, all ? 10 : 3);
+  const nowY = new Date().getFullYear();
+  const years = []; for (let y=nowY; y>=DASH_FROM_YEAR; y--) years.push(y);
+  const yearSel = `
+    <label class="d2-year">
+      <select id="x-dyear" aria-label="集計する期間">
+        <option value="all" ${all?"selected":""}>合計</option>
+        ${years.map((y)=>`<option value="${y}" ${xs.dashYear===y?"selected":""}>${y}</option>`).join("")}
+      </select>${XI.down}
+    </label>`;
+
+  /* ① */
+  const stmt = list.length
+    ? `<p class="d2-stmt">${all ? "今までに" : `${xs.dashYear}年に`}<b>${dashFmt(rank.length)}施設</b>で<br>整いました。</p>
+       <p class="d2-sub">のべ<b> ${dashFmt(list.length)} </b>回のサ活</p>`
+    : `<p class="d2-stmt">${all ? "まだ" : `${xs.dashYear}年は`}<br><b>記録がありません。</b></p>
+       <p class="d2-sub">DAIALYに行ったサウナを登録すると、ここに集計されます</p>`;
+
+  /* ② ③ */
+  const thumb = (r)=>{ const u = r.it ? aImgURL(r.it) : ""; return u ? `<img class="d2-thumb" src="${u}" alt="" loading="lazy">` : `<span class="d2-thumb">${XI.sauna}</span>`; };
+  const cards = top.map((r,i)=>{
+    const u = r.it ? aImgURL(r.it) : "";
+    return `
+    <article class="d2-card">
+      ${u ? `<img src="${u}" alt="" loading="lazy">` : `<div class="d2-noimg">${XI.sauna}</div>`}
+      <span class="d2-rank">${i+1}</span>
+      <div class="d2-cap"><b>${esc(r.name)}</b><span>${dashFmt(r.c)}回</span></div>
+    </article>`;
+  }).join("");
+  const rows = top.map((r,i)=>{
+    const pref = r.it ? shortPref(r.it.pref) : r.loc;
+    return `
+    <div class="d2-row">
+      ${thumb(r)}
+      <div class="d2-rbody">
+        <span class="d2-rn">${i+1}</span>
+        <div class="d2-rtext"><div class="d2-rname">${esc(r.name)}</div><div class="d2-rsub">${pref ? esc(pref)+" · " : ""}${dashFmt(r.c)}回</div></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  /* ④ */
+  const pc = dashPrefCounts(list);
+  const prefs = Object.keys(pc).sort((a,b)=>pc[b]-pc[a] || prefRank(a)-prefRank(b));
+  const top3 = prefs.slice(0,3).map((p,i)=>`<li><span class="n">${i+1}</span><span class="p">${p}</span><span class="c">${dashFmt(pc[p])}回</span></li>`).join("");
+
+  /* ⑤ */
+  let chart, chartTitle;
+  if (all){
+    const ys = []; for (let y=DASH_FROM_YEAR; y<=nowY; y++) ys.push(y);
+    const vals = ys.map((y)=>list.filter((e)=>e.date.startsWith(y+"-")).length);
+    chart = dashYearBarsHTML(vals, ys.map(String), ys.length-1);
+    chartTitle = "年ごとのサ活";
+  } else {
+    const vals = Array.from({length:12}, (_,m)=>list.filter((e)=>Number(e.date.slice(5,7))===m+1).length);
+    const cur = (xs.dashYear===nowY) ? new Date().getMonth() : -1;
+    chart = dashBarsHTML(vals, Array.from({length:12},(_,m)=>`${m+1}月`), cur);
+    chartTitle = "月ごとのサ活";
+  }
+
+  const none = `<p class="d2-empty">この期間の記録はありません</p>`;
+  return `
+  <div class="d2">
+    <div class="d2-glow"></div>
+    <header class="d2-hdr"><button class="back" data-go="home">← Top</button></header>
+    <div class="d2-titlerow"><h1 class="d2-title">Dashboard</h1>${yearSel}</div>
+    ${stmt}
+    <section class="d2-sec">
+      <h2 class="d2-h">あなたのトップサウナ</h2>
+      ${top.length ? `<div class="d2-cards no-swipe">${cards}</div>` : none}
+    </section>
+    <section class="d2-sec">
+      <h2 class="d2-h">ランキング</h2>
+      ${top.length ? `<div class="d2-list">${rows}</div>` : none}
+    </section>
+    <section class="d2-sec">
+      <h2 class="d2-h">あなたのサウナ分布</h2>
+      <div class="d2-panel">
+        ${dashMapHTML(pc)}
+        <div class="d2-maplegend"><span>行った都道府県</span><span><b>${prefs.length}</b>/ 47</span></div>
+        ${top3 ? `<ol class="d2-top3">${top3}</ol>` : ""}
+      </div>
+    </section>
+    <section class="d2-sec">
+      <h2 class="d2-h">${chartTitle}</h2>
+      <div class="d2-panel d2-chart">${chart}</div>
+    </section>
+  </div>`;
+}
 
 
 /* ---------------- スワイプ操作 ----------------
@@ -3229,7 +3608,7 @@ document.addEventListener("touchstart",(ev)=>{
   const cropOpen = document.getElementById("cropper").classList.contains("open");
   const modalOpen = document.getElementById("modal").classList.contains("open");
   const sheetOpen = document.getElementById("x-sheet").classList.contains("open");
-  const onInput = ev.target && ev.target.closest && ev.target.closest("input,select");
+  const onInput = ev.target && ev.target.closest && ev.target.closest("input,select,.no-swipe");
   if (cropOpen || modalOpen || sheetOpen || onInput || ev.touches.length!==1){ swipeStart = null; return; }
   const t = ev.touches[0];
   swipeStart = { x:t.clientX, y:t.clientY, time:Date.now(), edge:t.clientX < 28 };
@@ -3259,6 +3638,7 @@ function render(){
   else if (view==="settingsTier") root.innerHTML = settingsHTML();
   else if (xIsView(view)) root.innerHTML = xRender();
   if (!xIsView(view)) xLastKey = "";
+  if (view==="dash") dashAfterRender();
   /* 背景画像: トップ/AWARD/設定画面のみに適用 */
   const bgEl = document.getElementById("bgimg");
   if (bgEl){

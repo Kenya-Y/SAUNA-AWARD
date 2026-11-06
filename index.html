@@ -595,6 +595,9 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 .d2-cap b{display:block;font-family:-apple-system,'Helvetica Neue','Noto Sans JP',sans-serif;font-weight:700;font-size:18px;line-height:1.35;}
 .d2-cap span{display:block;margin-top:4px;font-size:14px;color:rgba(255,255,255,.86);}
 .d2-list{margin:0 20px;}
+.d2-lpages{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 20px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;}
+.d2-lpages::-webkit-scrollbar{display:none;}
+.d2-lpage{flex:0 0 86%;min-width:0;scroll-snap-align:start;scroll-margin-left:20px;}
 .d2-row{display:flex;align-items:center;gap:14px;}
 .d2-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;background:#1d1915;display:flex;align-items:center;justify-content:center;color:var(--gold);}
 .d2-thumb svg{width:22px;height:22px;opacity:.6;}
@@ -614,6 +617,7 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 .d2-yscroll::-webkit-scrollbar{display:none;}
 /* 左に過去の年が続いていることを、左端を少しぼかして示す */
 .d2-yscroll.many{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 22px);mask-image:linear-gradient(90deg,transparent 0,#000 22px);}
+.d2-yscroll.many.at-start{-webkit-mask-image:none;mask-image:none;}
 .d2-ycols{display:flex;align-items:flex-end;height:220px;}
 .d2-ycol{flex:0 0 20%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;scroll-snap-align:start;padding:0 5px;box-sizing:border-box;}
 .d2-ycols.few .d2-ycol{flex:1 1 0;}
@@ -658,7 +662,7 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 "use strict";
 
 /* ============================================================
-   SAUNA AWARD ver3.5 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
+   SAUNA AWARD ver3.6 — iPhone スタンドアロン版 (SAUNACHELIN風デザイン)
    メニュー: DAIALY / ARCHIVE / AWARD / DASHBOARD / 設定
    ・AWARD  : Tier1〜3に各7施設（和名はARCHIVEから選択 / ローマ字 / Address / URL / 画像 / ミニ写真）
    ・DAIALY : 行ったサウナをカレンダーで記録（ARCHIVEの施設から選択）
@@ -676,7 +680,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 50;   /* 施設名の上限（ARCHIVE・AWARD共通） */
 const MAX_DATAURL = 1400000;
-const APP_VER = "3.5";
+const APP_VER = "3.6";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -3311,7 +3315,7 @@ document.addEventListener("keydown", (ev)=>{
 document.addEventListener("change", async (ev)=>{
   if (ev.target.id==="x-date"){ dCaptureDate(); return; }
   if (ev.target.id==="x-sort"){ aSort = ev.target.value; xRerenderKeep(); return; }
-  if (ev.target.id==="x-dyear"){ xs.dashYear = ev.target.value==="all" ? "all" : Number(ev.target.value); render(); window.scrollTo(0,0); return; }
+  if (ev.target.id==="x-dyear"){ const v = ev.target.value; xs.dashYear = (v==="all" || v==="pre") ? v : Number(v); render(); window.scrollTo(0,0); return; }
   if (ev.target.id!=="x-aimg") return;
   const file = ev.target.files && ev.target.files[0];
   ev.target.value = "";
@@ -3343,8 +3347,13 @@ const DASH_FROM_YEAR = 2020;
 const dashNow = new Date();
 xs.dashYear = "all";                          /* 初期表示は合計。数値=その年 */
 
+/* 集計範囲（ver3.6〜）
+   ・合計    : DAIALYの最古の記録 〜 今日
+   ・2019以前: DAIALYの最古の記録 〜 2019年12月31日
+   ・各年    : その年の1月1日 〜 12月31日 */
 function dashRange(){
-  if (xs.dashYear==="all") return [`${DASH_FROM_YEAR}-01-01`, ymd(new Date())];
+  if (xs.dashYear==="all") return ["0000-01-01", ymd(new Date())];
+  if (xs.dashYear==="pre") return ["0000-01-01", `${DASH_FROM_YEAR-1}-12-31`];
   return [`${xs.dashYear}-01-01`, `${xs.dashYear}-12-31`];
 }
 function dashEntries(){
@@ -3474,7 +3483,12 @@ function dashMapHTML(cnt){
 /* 画面を描いた後の処理（年ごとのグラフを最新の年までスクロール） */
 function dashAfterRender(){
   const sc = document.getElementById("d2-yscroll");
-  if (sc) sc.scrollLeft = sc.scrollWidth;
+  if (!sc) return;
+  sc.scrollLeft = sc.scrollWidth;
+  /* 左端（いちばん古い年）まで来たら、続きを示すぼかしを消す */
+  const edge = ()=>sc.classList.toggle("at-start", sc.scrollLeft < 4);
+  sc.addEventListener("scroll", edge, { passive:true });
+  edge();
 }
 
 /* ⑤ 年ごとの棒グラフ: 一度に5年分を表示し、横スクロールで過去の年へ（初期表示は今年が右端） */
@@ -3500,6 +3514,8 @@ function dashBarsHTML(values, labels, curIdx){
 
 function dashHTML(){
   const all = xs.dashYear==="all";
+  const pre = xs.dashYear==="pre";
+  const preLabel = `${DASH_FROM_YEAR-1}以前`;
   const list = dashEntries();
   const rank = dashRanking(list);
   const top = rank.slice(0, all ? 10 : 3);
@@ -3510,14 +3526,17 @@ function dashHTML(){
       <select id="x-dyear" aria-label="集計する期間">
         <option value="all" ${all?"selected":""}>合計</option>
         ${years.map((y)=>`<option value="${y}" ${xs.dashYear===y?"selected":""}>${y}</option>`).join("")}
+        <option value="pre" ${pre?"selected":""}>${preLabel}</option>
       </select>${XI.down}
     </label>`;
+  const head = all ? "今までに" : pre ? `${DASH_FROM_YEAR-1}年以前に` : `${xs.dashYear}年に`;
+  const headNone = all ? "まだ" : pre ? `${DASH_FROM_YEAR-1}年以前は` : `${xs.dashYear}年は`;
 
   /* ① */
   const stmt = list.length
-    ? `<p class="d2-stmt">${all ? "今までに" : `${xs.dashYear}年に`}<b>${dashFmt(rank.length)}施設</b>で<br>整いました。</p>
+    ? `<p class="d2-stmt">${head}<b>${dashFmt(rank.length)}施設</b>で<br>整いました。</p>
        <p class="d2-sub">のべ<b> ${dashFmt(list.length)} </b>回のサ活</p>`
-    : `<p class="d2-stmt">${all ? "まだ" : `${xs.dashYear}年は`}<br><b>記録がありません。</b></p>
+    : `<p class="d2-stmt">${headNone}<br><b>記録がありません。</b></p>
        <p class="d2-sub">DAIALYに行ったサウナを登録すると、ここに集計されます</p>`;
 
   /* ② ③ */
@@ -3541,7 +3560,7 @@ function dashHTML(){
         <div class="d2-rtext"><div class="d2-rname">${esc(r.name)}</div><div class="d2-rsub">${pref ? esc(pref)+" · " : ""}${dashFmt(r.c)}回</div></div>
       </div>
     </div>`;
-  }).join("");
+  });
 
   /* ④ */
   const pc = dashPrefCounts(list);
@@ -3550,10 +3569,23 @@ function dashHTML(){
 
   /* ⑤ */
   let chart, chartTitle;
+  const byYear = (y)=>list.filter((e)=>e.date.startsWith(y+"-")).length;
   if (all){
+    /* 合計: 「2019以前」（最古の記録〜2019年末）＋ 2020年〜今年 */
     const ys = []; for (let y=DASH_FROM_YEAR; y<=nowY; y++) ys.push(y);
-    const vals = ys.map((y)=>list.filter((e)=>e.date.startsWith(y+"-")).length);
-    chart = dashYearBarsHTML(vals, ys.map(String), ys.length-1);
+    const preCount = list.filter((e)=>e.date < `${DASH_FROM_YEAR}-01-01`).length;
+    const vals = [preCount].concat(ys.map(byYear));
+    chart = dashYearBarsHTML(vals, [preLabel].concat(ys.map(String)), vals.length-1);
+    chartTitle = "年ごとのサ活";
+  } else if (pre){
+    /* 2019以前: DAIALYの最古の記録の年 〜 2019年 */
+    if (list.length){
+      const first = Math.min(...list.map((e)=>Number(e.date.slice(0,4))));
+      const ys = []; for (let y=first; y<=DASH_FROM_YEAR-1; y++) ys.push(y);
+      chart = dashYearBarsHTML(ys.map(byYear), ys.map(String), -1);
+    } else {
+      chart = `<p class="d2-maploading">この期間の記録はありません</p>`;
+    }
     chartTitle = "年ごとのサ活";
   } else {
     const vals = Array.from({length:12}, (_,m)=>list.filter((e)=>Number(e.date.slice(5,7))===m+1).length);
@@ -3575,7 +3607,9 @@ function dashHTML(){
     </section>
     <section class="d2-sec">
       <h2 class="d2-h">ランキング</h2>
-      ${top.length ? `<div class="d2-list">${rows}</div>` : none}
+      ${!top.length ? none : (all && top.length > 5)
+        ? `<div class="d2-lpages no-swipe"><div class="d2-lpage">${rows.slice(0,5).join("")}</div><div class="d2-lpage">${rows.slice(5).join("")}</div></div>`
+        : `<div class="d2-list">${rows.join("")}</div>`}
     </section>
     <section class="d2-sec">
       <h2 class="d2-h">あなたのサウナ分布</h2>

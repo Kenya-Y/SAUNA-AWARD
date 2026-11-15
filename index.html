@@ -10,8 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SAUNA AWARD">
 <meta name="theme-color" content="#0A0908">
+<!-- フォントは後から読み込む（通信が遅いときも、フォントを待たずにすぐ画面を表示する） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&amp;family=Noto+Sans+JP:wght@400;500;700;900&amp;display=swap" media="print" onload="this.media='all'">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
 
 :root{
   --ink:#0A0908; --ink-soft:#141210;
@@ -646,6 +649,44 @@ img.entry{width:100%;height:100%;object-fit:cover;display:block;}
 .d2-blabels span.cur{color:var(--gold);font-weight:700;}
 .d2-empty{margin:0 20px;padding:24px 16px;border:1px dashed rgba(255,255,255,.18);border-radius:18px;text-align:center;font-size:13px;color:rgba(255,255,255,.5);line-height:1.9;}
 
+
+/* ---------- DAIALY: サウナ以外の予定（ver3.7〜） ---------- */
+.x-chip.ev{border-left-color:var(--sat);background:rgba(143,169,201,.18);color:#D3E0F0;}
+.x-bar.ev{background:var(--sat);}
+.x-seg{display:flex;gap:6px;margin:18px 0 6px;padding:4px;border:1px solid rgba(255,255,255,.22);border-radius:999px;}
+.x-seg button{flex:1;border:none;border-radius:999px;background:none;color:var(--paper-dim);font-family:'Noto Sans JP',sans-serif;font-size:14px;letter-spacing:.12em;padding:10px 0;cursor:pointer;}
+.x-seg button.on{background:var(--gold-grad);color:var(--ink);font-weight:700;}
+.x-seg button.on.ev{background:var(--sat);}
+.x-flab{flex:none;align-self:center;font-size:12px;line-height:1;letter-spacing:.1em;color:var(--paper-dim);margin:0;padding:0;position:static;}
+/* 連続した日付の予定: 日をまたいでつながる帯 */
+.x-chip.sp{width:calc(100% + 4px);margin:0 -2px;border-left:none;border-radius:0;padding-left:5px;background:rgba(143,169,201,.34);color:#E6EEF8;}
+.x-chip.sp.sp-s{width:calc(100% + 2px);margin-left:0;border-left:2px solid var(--sat);border-radius:2px 0 0 2px;padding-left:3px;overflow:visible;position:relative;z-index:1;}
+.x-chip.sp .sp-t{position:absolute;left:3px;top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
+.x-chip.sp.sp-e{width:calc(100% + 2px);margin-right:0;border-radius:0 2px 2px 0;}
+.x-chip.sp.sp-s.sp-e{width:100%;margin:0;border-radius:2px;}
+/* DASHBOARD: TIER・星の比率 */
+.d2-pie{display:flex;align-items:center;gap:18px;padding:6px 2px;}
+.d2-piechart{position:relative;flex:none;width:42%;max-width:170px;}
+.d2-piechart svg{display:block;width:100%;height:auto;transform:rotate(0deg);}
+.d2-piemid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;line-height:1.1;}
+.d2-piemid b{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;font-size:24px;letter-spacing:-.02em;}
+.d2-piemid span{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;}
+.d2-pielegend{flex:1;min-width:0;list-style:none;margin:0;padding:0;}
+.d2-pielegend li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;color:#fff;}
+.d2-pielegend li:last-child{border-bottom:none;}
+.d2-pielegend li.zero{color:rgba(255,255,255,.38);}
+.d2-pielegend i{flex:none;width:10px;height:10px;border-radius:3px;}
+.d2-pielegend .l{flex:1;min-width:0;white-space:nowrap;font-weight:700;letter-spacing:.02em;}
+.d2-pielegend .c{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;}
+.d2-pielegend .p{width:50px;text-align:right;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;}
+/* DAIALYの背景を上部（ヘッダー）にも表示: 画面全体の背景と同じ位置・同じ大きさで重ねる */
+body.dbg-on .x-hdr{background:var(--ink);overflow:hidden;}
+body.dbg-on .x-hdr::before{
+  content:"";position:absolute;left:0;top:0;width:100%;height:var(--bgh,100vh);z-index:-1;pointer-events:none;
+  background:linear-gradient(rgba(5,4,3,.72),rgba(5,4,3,.72)), var(--dbg) center / cover no-repeat;
+}
+/* DAIALYの背景は予定が読みやすいよう、少し濃いめのフィルターを重ねる */
+#bgimg.dim::after{background:rgba(5,4,3,.72);}
 </style>
 </head>
 <body>
@@ -680,7 +721,7 @@ const TIERS = [
 const SLOTS = 7;
 const MAX_TITLE = 50;   /* 施設名の上限（ARCHIVE・AWARD共通） */
 const MAX_DATAURL = 1400000;
-const APP_VER = "3.6";
+const APP_VER = "3.7";
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = "sauna-award";
@@ -803,6 +844,15 @@ const bgReady = idbGet(BG_KEY)
    Tier画面冒頭のタイトル画面の背景。IDBのキー "bgt1"〜"bgt3" に保存。 */
 const tierBgs = { 1:null, 2:null, 3:null };
 const tierBgKey = (t)=>`bgt${t}`;
+/* ---------------- DAIALYの背景（ver3.7〜） ----------------
+   IDBのキー "bgd" に保存。画像(dataURL) / "top"(トップと同じ背景を使う) / なし(黒) */
+const DBG_KEY = "bgd";
+let dBg = null;
+const dBgReady = idbGet(DBG_KEY)
+  .then((v)=>{ dBg = (typeof v==="string" && v) ? v : null; if (dBg && view==="daialy") render(); })
+  .catch(()=>{});
+const dBgURL = ()=>dBg==="top" ? appBg : dBg;
+
 const tierBgReady = Promise.all([1,2,3].map((t)=>
   idbGet(tierBgKey(t))
     .then((v)=>{ if (typeof v==="string" && v) tierBgs[t]=v; })
@@ -865,7 +915,8 @@ function storedSize(v){
 async function calcDataSize(){
   await bgReady;
   await tierBgReady;
-  let bytes = storedSize(appBg);
+  await dBgReady;
+  let bytes = storedSize(appBg) + storedSize(dBg);
   for (const t of [1,2,3]) if (tierBgs[t]) bytes += storedSize(tierBgs[t]);
   for (const T of TIERS){
     const t = T.id;
@@ -890,8 +941,9 @@ async function rebuildDatabase(){
     await tierBgReady;
     await btnReady;
     await xReady;
+    await dBgReady;
     const all = {};
-    let hasAny = !!appBg || btnStyle!=="default" || !!tierBgs[1] || !!tierBgs[2] || !!tierBgs[3]
+    let hasAny = !!dBg || !!appBg || btnStyle!=="default" || !!tierBgs[1] || !!tierBgs[2] || !!tierBgs[3]
       || aItems.length>0 || dEntries.length>0;
     for (const T of TIERS){
       const t = T.id;
@@ -912,6 +964,7 @@ async function rebuildDatabase(){
         }
       }
       if (appBg) await idbSet(BG_KEY, appBg);
+      if (dBg) await idbSet(DBG_KEY, dBg);
       for (const t of [1,2,3]) if (tierBgs[t]) await idbSet(tierBgKey(t), tierBgs[t]);
       if (btnStyle!=="default") await idbSet(BTN_KEY, btnStyle);
       /* DAIALY・ARCHIVE */
@@ -1115,6 +1168,8 @@ async function buildBackup(){
   await tierBgReady;
   const files = [];
   if (appBg) files.push({ name:"bg.jpg", data:dataURLtoBytes(appBg) });
+  await dBgReady;
+  if (dBg && dBg.startsWith("data:")) files.push({ name:"bg_daialy.jpg", data:dataURLtoBytes(dBg) });
   for (const t of [1,2,3]) if (tierBgs[t] && tierBgs[t].startsWith("data:")) files.push({ name:`bg_tier${t}.jpg`, data:dataURLtoBytes(tierBgs[t]) });
   for (const T of TIERS){
     const t = T.id;
@@ -1158,13 +1213,17 @@ async function restoreFromZip(file){
   let recognized = 0;
   let newBg = null;
   const newTierBgs = { 1:null, 2:null, 3:null };
+  let newDBg = null;
   for (const f of entries){
     const csvMatch = f.name.match(/^def_tier([123])\.csv$/i);
     const imgMatch = f.name.match(/^data_tier([123])_([1-7])\.(jpg|jpeg|png)$/i);
     const miniMatch = f.name.match(/^mini_tier([123])_([1-7])_([123])\.(jpg|jpeg|png)$/i);
     const bgMatch = f.name.match(/^bg\.(jpg|jpeg|png)$/i);
     const tbgMatch = f.name.match(/^bg_tier([123])\.(jpg|jpeg|png)$/i);
-    if (f.name==="award_links.csv"){
+    if (/^bg_daialy\.(jpg|jpeg|png)$/i.test(f.name)){
+      recognized++;
+      newDBg = bytesToDataURL(f.data, extMime(f.name));
+    } else if (f.name==="award_links.csv"){
       recognized++;
       for (const line of new TextDecoder().decode(f.data).split(/\r?\n/)){
         const pp = csvSplit(line);
@@ -1217,6 +1276,10 @@ async function restoreFromZip(file){
   await bgReady;
   appBg = newBg;
   if (newBg) await idbSet(BG_KEY, newBg);
+  /* DAIALYの背景: 画像があれば復元。「トップと同じ」は表示設定のため維持 */
+  await dBgReady;
+  if (newDBg) dBg = newDBg; else if (dBg!=="top") dBg = null;
+  if (dBg) await idbSet(DBG_KEY, dBg);
   await tierBgReady;
   for (const t of [1,2,3]){
     if (newTierBgs[t]){
@@ -1294,6 +1357,23 @@ function showBgMenu(){
         写真を選択<input class="file-input js-bgfile" type="file" accept="image/*">
       </label>
       <button class="tool-btn js-bgdefault" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す</button>
+      <button class="back js-bgcancel" style="width:100%;">戻る</button>
+    </div>`;
+  modal.classList.add("open");
+}
+
+/* DAIALYの背景設定メニュー（「背景画面の設定」と同じ操作） */
+function showDBgMenu(){
+  const mark = (v)=>((v==="img" && dBg && dBg!=="top") || (v==="top" && dBg==="top") || (v==="def" && !dBg)) ? " ✓" : "";
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="modal-box">
+      <p class="modal-msg">背景画面の設定（DAIALY）<br><span style="font-size:12px;color:var(--paper-dim);">DAIALY（月表示・リスト表示）の背景を変更します</span></p>
+      <label class="save-btn" style="display:block;margin-bottom:12px;letter-spacing:.15em;">
+        写真を選択${mark("img")}<input class="file-input js-dbgfile" type="file" accept="image/*">
+      </label>
+      <button class="tool-btn js-dbgtop" style="width:100%;margin-bottom:10px;">トップと同じ背景にする${mark("top")}</button>
+      <button class="tool-btn js-dbgdefault" style="width:100%;margin-bottom:14px;">デフォルト（黒）に戻す${mark("def")}</button>
       <button class="back js-bgcancel" style="width:100%;">戻る</button>
     </div>`;
   modal.classList.add("open");
@@ -1533,6 +1613,7 @@ function tiersHTML(isSettings){
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 24px;gap:18px;max-width:480px;width:100%;margin:0 auto;">
       ${rows}
       ${isSettings?`<button class="tool-btn js-bgmenu" style="margin-top:6px;">背景画面の設定</button>
+      <button class="tool-btn js-dbgmenu">背景画面の設定（DAIALY）</button>
       <button class="tool-btn js-btnmenu">ボタンの設定</button>`:""}
     </div>
     ${isSettings?`<p class="status" style="text-align:right;color:rgba(255,255,255,.35);padding:10px 18px calc(14px + env(safe-area-inset-bottom));margin:0;">ver ${APP_VER}</p>`:""}
@@ -1825,6 +1906,20 @@ document.addEventListener("click", async (ev)=>{
     if (msg) msg.textContent = "背景をデフォルトに戻しました";
     return;
   }
+  if (ev.target.closest(".js-dbgmenu")){ showDBgMenu(); return; }
+  if (ev.target.closest(".js-dbgtop") || ev.target.closest(".js-dbgdefault")){
+    const top = !!ev.target.closest(".js-dbgtop");
+    closeModal();
+    await dBgReady;
+    dBg = top ? "top" : null;
+    try{ if (top) await idbSet(DBG_KEY, "top"); else await idbDel(DBG_KEY); }catch(e){}
+    /* 写真を消したぶん容量を戻す */
+    await rebuildDatabase();
+    render();
+    const msg = root.querySelector(".js-bakmsg");
+    if (msg) msg.textContent = top ? "DAIALYの背景をトップと同じにしました" : "DAIALYの背景をデフォルトに戻しました";
+    return;
+  }
   const tbgmEl = ev.target.closest(".js-tbgmenu");
   if (tbgmEl){ showTierBgMenu(activeTier); return; }
   const tbgdEl = ev.target.closest(".js-tbgdefault");
@@ -1954,6 +2049,33 @@ document.addEventListener("change", async (ev)=>{
       });
     }catch(e){
       const msg = root.querySelector(".js-tiermsg");
+      if (msg) msg.textContent = "この画像は背景に使用できませんでした";
+    }
+    return;
+  }
+  if (ev.target.classList.contains("js-dbgfile")){
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    closeModal();
+    if (!file) return;
+    try{
+      const imgEl = await decodeViaImg(await fileToDataURL(file));
+      /* 「背景画面の設定」と同じく、スマホの画面と同じ縦横比で切り抜き */
+      const ar = window.innerHeight / window.innerWidth;
+      openCropper(imgEl, {
+        ar, outW: 720, outH: Math.min(1600, Math.round(720*ar)), q: 0.7, steps: [0.6, 0.5, 0.4], maxLen: 400000,
+        onDone: async (out)=>{
+          await dBgReady;
+          dBg = out;
+          try{ await idbSet(DBG_KEY, out); }catch(e){ storageOK=false; showBanner(); }
+          await rebuildDatabase();   /* 古い背景の残骸を掃除 */
+          render();
+          const msg = root.querySelector(".js-bakmsg");
+          if (msg) msg.textContent = "DAIALYの背景画像を設定しました";
+        }
+      });
+    }catch(e){
+      const msg = root.querySelector(".js-bakmsg");
       if (msg) msg.textContent = "この画像は背景に使用できませんでした";
     }
     return;
@@ -2206,8 +2328,18 @@ function idbGetPrefix(prefix){
   }));
 }
 /* DAIALYは必要最小限の項目だけを保存 */
+/* サウナ以外の予定（ver3.7〜）: { id, date, ev:"予定の内容" } の3項目だけを保存 */
+const D_EV_MAX = 40;
+const dIsEvent = (e)=>!!e && typeof e.ev==="string";
+/* 連続した日付の予定: end（終了日）が開始日より後のもの */
+const D_SPAN_MAX = 31;
+const dIsSpan = (e)=>dIsEvent(e) && typeof e.end==="string" && /^\d{4}-\d{2}-\d{2}$/.test(e.end) && e.end > e.date;
+const dAddDays = (ds, n)=>{ const p = ds.split("-").map(Number); return ymd(new Date(p[0], p[1]-1, p[2]+n)); };
+const dDaysBetween = (a, b)=>{ const pa=a.split("-").map(Number), pb=b.split("-").map(Number); return Math.round((Date.UTC(pb[0],pb[1]-1,pb[2]) - Date.UTC(pa[0],pa[1]-1,pa[2]))/86400000); };
+const dShortMD = (ds)=>`${Number(ds.slice(5,7))}/${Number(ds.slice(8,10))}`;
 function dPack(){
-  return dEntries.map((e)=>e.sid ? { id:e.id, date:e.date, sid:e.sid } : { id:e.id, date:e.date, name:e.name||"", loc:e.loc||"" });
+  return dEntries.map((e)=>dIsEvent(e) ? (dIsSpan(e) ? { id:e.id, date:e.date, end:e.end, ev:e.ev } : { id:e.id, date:e.date, ev:e.ev })
+    : e.sid ? { id:e.id, date:e.date, sid:e.sid } : { id:e.id, date:e.date, name:e.name||"", loc:e.loc||"" });
 }
 async function dSave(){
   try{
@@ -2267,7 +2399,8 @@ function xBackupFiles(){
   }
   let dcsv = "";
   for (const e of dEntries){
-    dcsv += (e.sid ? csvRow([e.id, e.date, e.sid, "", ""]) : csvRow([e.id, e.date, "", e.name, e.loc])) + "\n";
+    dcsv += (dIsEvent(e) ? csvRow(dIsSpan(e) ? [e.id, e.date, "", "", "", e.ev, e.end] : [e.id, e.date, "", "", "", e.ev])
+      : e.sid ? csvRow([e.id, e.date, e.sid, "", ""]) : csvRow([e.id, e.date, "", e.name, e.loc])) + "\n";
   }
   files.unshift({ name:"archive.csv", data:enc.encode(acsv) });
   files.push({ name:"daialy.csv", data:enc.encode(dcsv) });
@@ -2293,6 +2426,13 @@ function xParseBackup(entries){
         const p = csvSplit(line);
         if (!p[0] || !/^\d{4}-\d{2}-\d{2}$/.test((p[1]||"").trim())) continue;
         const sid = (p[2]||"").trim();
+        const evt = (p[5]||"").trim();
+        if (evt){
+          const rec = { id:p[0].trim(), date:p[1].trim(), ev:evt.slice(0, D_EV_MAX) };
+          const end = (p[6]||"").trim();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(end) && end > rec.date) rec.end = end;
+          out.daialy.push(rec); continue;
+        }
         out.daialy.push(sid ? { id:p[0].trim(), date:p[1].trim(), sid }
                             : { id:p[0].trim(), date:p[1].trim(), name:(p[3]||"").trim(), loc:(p[4]||"").trim() });
       }
@@ -2400,6 +2540,7 @@ const xSheet = document.getElementById("x-sheet");
 
 function aOf(id){ return id ? (aItems.find((x)=>x.id===id) || null) : null; }
 function dInfo(e){
+  if (dIsEvent(e)) return { name:e.ev, loc:"", img:"" };
   const s = aOf(e.sid);
   if (s) return { name:s.name, loc:shortPref(s.pref), img:aImgURL(s) };
   return { name:e.name || "（施設名なし）", loc:e.loc || "", img:"" };
@@ -2426,6 +2567,8 @@ function dHeaderHTML(){
   </header>`;
 }
 function dEntryInner(e){
+  if (dIsEvent(e)) return `<span class="x-bar ev"></span>
+    <span class="x-etext"><span class="x-nm">${esc(e.ev)}</span><span class="x-lc">予定${dIsSpan(e) ? ` ・ ${dShortMD(e.date)}〜${dShortMD(e.end)}` : ""}</span></span>`;
   const s = dInfo(e);
   return `${s.img ? `<img class="x-thumb" src="${s.img}" alt="" loading="lazy" decoding="async">` : `<span class="x-bar"></span>`}
     <span class="x-etext">
@@ -2435,8 +2578,21 @@ function dEntryInner(e){
 }
 function dGroup(){
   const map = {};
-  for (const e of dEntries){ (map[e.date] = map[e.date] || []).push(e); }
-  for (const k in map) map[k].sort((a,b)=>a.id<b.id ? -1 : 1);
+  for (const e of dEntries){
+    (map[e.date] = map[e.date] || []).push(e);
+    /* 連続した日付の予定は、期間中のすべての日に表示 */
+    if (dIsSpan(e)){
+      const n = Math.min(D_SPAN_MAX-1, dDaysBetween(e.date, e.end));
+      for (let i=1;i<=n;i++){ const ds = dAddDays(e.date, i); (map[ds] = map[ds] || []).push(e); }
+    }
+  }
+  /* 連続した予定を先頭に（日をまたいで帯がつながるように）。それ以外は従来どおり登録順 */
+  for (const k in map) map[k].sort((a,b)=>{
+    const sa = dIsSpan(a), sb = dIsSpan(b);
+    if (sa !== sb) return sa ? -1 : 1;
+    if (sa && a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.id<b.id ? -1 : 1;
+  });
   return map;
 }
 function dCalHTML(){
@@ -2452,10 +2608,21 @@ function dCalHTML(){
     const wd = (startWd + d - 1) % 7;
     const list = map[ds] || [];
     const hol = holidayName(ds);
-    const chips = list.slice(0,2).map((e)=>`<span class="x-chip">${esc(dInfo(e).name)}</span>`).join("")
+    const chipArr = list.slice(0,2).map((e)=>{
+      if (!dIsSpan(e)) return `<span class="x-chip ${dIsEvent(e)?"ev":""}">${esc(dInfo(e).name)}</span>`;
+      /* 帯: 週の端（日曜・土曜）と月の端で区切り、区切りの先頭に予定名を表示 */
+      const isS = ds===e.date || wd===0 || d===1;
+      const isE = ds===e.end || wd===6 || d===days;
+      /* 予定名は、この区切りの帯の長さ（日数ぶん）まで広げて表示 */
+      const segN = Math.min(dDaysBetween(ds, e.end), 6-wd, days-d) + 1;
+      return `<span class="x-chip ev sp ${isS?"sp-s":""} ${isE?"sp-e":""}">${isS ? `<span class="sp-t" style="width:calc(${segN*100}% - 8px)">${esc(e.ev)}</span>` : ""}&nbsp;</span>`;
+    });
+    const nSpan = list.slice(0,2).filter(dIsSpan).length;
+    const chipsTop = chipArr.slice(0, nSpan).join("");
+    const chips = chipArr.slice(nSpan).join("")
       + (list.length>2 ? `<span class="x-more">+${list.length-2}</span>` : "");
     const cls = ["x-cell","wd"+wd, hol?"hol":"", ds===xs.sel?"sel":"", ds===todayStr?"today":""].join(" ");
-    cells.push(`<button class="${cls}" data-x="d-select" data-date="${ds}" aria-label="${m+1}月${d}日${hol?`、${hol}`:""}${list.length?`、記録${list.length}件`:""}"><span class="x-dnum">${d}</span>${hol?`<span class="x-hname">${hol}</span>`:""}${chips}</button>`);
+    cells.push(`<button class="${cls}" data-x="d-select" data-date="${ds}" aria-label="${m+1}月${d}日${hol?`、${hol}`:""}${list.length?`、記録${list.length}件`:""}"><span class="x-dnum">${d}</span>${chipsTop}${hol?`<span class="x-hname">${hol}</span>`:""}${chips}</button>`);
   }
   while (cells.length % 7) cells.push(`<div class="x-cell blank"></div>`);
   const selList = map[xs.sel] || [];
@@ -2501,8 +2668,9 @@ function dBarHTML(){
 function dRegHTML(){
   const dd = xs.dDraft;
   const edit = !!xs.dEditId;
+  const isEv = dd.kind==="ev";
   const s = aOf(dd.sid);
-  const ready = !!s || !!dd.name;
+  const ready = isEv ? !!(dd.ev||"").trim() : (!!s || !!dd.name);
   let sel;
   if (s){
     const u = aImgURL(s);
@@ -2521,15 +2689,27 @@ function dRegHTML(){
       <button class="x-reg-ok ${ready?"":"off"}" data-x="d-submit">決定</button>
     </header>
     <div class="x-reg-body">
-      <label class="x-field"><span class="x-ficon">${XI.cal}</span>
-        <input id="x-date" type="date" value="${dd.date}" aria-label="行った日">
+      <div class="x-seg">
+        <button class="${isEv?"":"on"}" data-x="d-kind-sauna" aria-pressed="${!isEv}">サウナ</button>
+        <button class="${isEv?"on ev":""}" data-x="d-kind-ev" aria-pressed="${isEv}">予定</button>
+      </div>
+      <label class="x-field"><span class="x-ficon">${XI.cal}</span>${isEv?`<span class="x-flab">開始</span>`:""}
+        <input id="x-date" type="date" value="${dd.date}" aria-label="${isEv?"開始日":"日付"}">
       </label>
+      ${isEv ? `
+      <label class="x-field"><span class="x-ficon">${XI.cal}</span><span class="x-flab">終了</span>
+        <input id="x-date2" type="date" value="${dd.end && dd.end>dd.date ? dd.end : dd.date}" min="${dd.date}" aria-label="終了日">
+      </label>
+      <label class="x-field"><span class="x-ficon">${XI.list}</span>
+        <input id="x-evt" type="text" maxlength="${D_EV_MAX}" placeholder="予定を入力（例：飲み会、出張）" value="${esc(dd.ev||"")}" autocomplete="off" aria-label="予定の内容">
+      </label>
+      <p class="x-reg-note" style="color:var(--paper-dim);">サウナ以外の予定は、DASHBOARDの集計には含まれません</p>` : `
       <button class="x-field x-pick" data-x="d-pick" aria-label="ARCHIVEからサウナを選択">
         <span class="x-ficon">${XI.sauna}</span>
         <span class="x-pick-main">${sel}</span>
         <span class="x-chev">${XI.right}</span>
       </button>
-      <button class="x-link x-newlink" data-x="d-new">ARCHIVEにないサウナを登録する</button>
+      <button class="x-link x-newlink" data-x="d-new">ARCHIVEにないサウナを登録する</button>`}
       ${edit ? `<button class="x-del" data-x="d-delete">この記録を削除</button>` : ""}
     </div>
   </div>`;
@@ -2835,17 +3015,25 @@ function dScrollToSel(smooth){
 function dCaptureDate(){
   const el = document.getElementById("x-date");
   if (el && /^\d{4}-\d{2}-\d{2}$/.test(el.value) && xs.dDraft) xs.dDraft.date = el.value;
+  /* 予定の終了日。開始日より前になったら開始日にそろえる */
+  const e2 = document.getElementById("x-date2");
+  if (e2 && xs.dDraft){
+    if (/^\d{4}-\d{2}-\d{2}$/.test(e2.value)) xs.dDraft.end = e2.value;
+    if (!xs.dDraft.end || xs.dDraft.end < xs.dDraft.date){ xs.dDraft.end = xs.dDraft.date; e2.value = xs.dDraft.date; }
+    e2.min = xs.dDraft.date;
+  }
 }
 function dOpenReg(entry){
   xs.dY = window.scrollY;
   if (entry){
     const s = aOf(entry.sid);
     xs.dEditId = entry.id;
-    xs.dDraft = s ? { date:entry.date, sid:s.id, name:"", loc:"" }
-                  : { date:entry.date, sid:null, name:entry.name||"", loc:entry.loc||"" };
+    if (dIsEvent(entry)) xs.dDraft = { date:entry.date, end:dIsSpan(entry)?entry.end:"", kind:"ev", sid:null, name:"", loc:"", ev:entry.ev };
+    else xs.dDraft = s ? { date:entry.date, kind:"sauna", sid:s.id, name:"", loc:"", ev:"" }
+                       : { date:entry.date, kind:"sauna", sid:null, name:entry.name||"", loc:entry.loc||"", ev:"" };
   } else {
     xs.dEditId = null;
-    xs.dDraft = { date:xs.sel, sid:null, name:"", loc:"" };
+    xs.dDraft = { date:xs.sel, kind:"sauna", sid:null, name:"", loc:"", ev:"" };
   }
   xShow("dreg");
 }
@@ -2858,12 +3046,28 @@ function dGoNewSauna(prefill){
   aNewDraft({ name:(prefill||"").slice(0,MAX_TITLE) });
   xShow("areg");
 }
+function dCaptureEv(){
+  const el = document.getElementById("x-evt");
+  if (el && xs.dDraft) xs.dDraft.ev = el.value;
+}
 async function dSubmit(){
-  dCaptureDate();
+  dCaptureDate(); dCaptureEv();
   const dd = xs.dDraft;
-  const s = aOf(dd.sid);
-  if (!s && !dd.name){ xToast("ARCHIVEからサウナを選択してください"); return; }
-  const rec = s ? { sid:s.id } : { name:dd.name, loc:dd.loc||"" };
+  let rec;
+  if (dd.kind==="ev"){
+    const t = (dd.ev||"").trim().slice(0, D_EV_MAX);
+    if (!t){ xToast("予定を入力してください"); return; }
+    rec = { ev:t };
+    if (dd.end && dd.end > dd.date){
+      if (dDaysBetween(dd.date, dd.end) > D_SPAN_MAX-1){ xToast(`予定の期間は${D_SPAN_MAX}日以内にしてください`); return; }
+      rec.end = dd.end;
+    }
+  } else {
+    const s = aOf(dd.sid);
+    if (!s && !dd.name){ xToast("ARCHIVEからサウナを選択してください"); return; }
+    rec = s ? { sid:s.id } : { name:dd.name, loc:dd.loc||"" };
+  }
+  const word = dd.kind==="ev" ? "予定" : "記録";
   const wasEdit = !!xs.dEditId;
   if (wasEdit){
     const i = dEntries.findIndex((x)=>x.id===xs.dEditId);
@@ -2879,7 +3083,7 @@ async function dSubmit(){
   view = "daialy"; render();
   if (xs.mode==="list") dScrollToSel(false);
   else window.scrollTo(0, prevMonth===(xs.y+"-"+xs.m) ? xs.dY : 0);
-  xToast(ok ? (wasEdit ? "記録を更新しました" : "記録を登録しました") : "保存できませんでした");
+  xToast(ok ? (wasEdit ? `${word}を更新しました` : `${word}を登録しました`) : "保存できませんでした");
 }
 async function dRemove(){
   const e = dEntries.find((x)=>x.id===xs.dEditId);
@@ -3084,7 +3288,7 @@ async function xOptimizeImages(){
   }
 }
 /* 起動時に一度だけ: 旧形式のデータを最適化して保存し直す（途中で閉じても次回やり直す） */
-const fmtReady = Promise.all([bgReady, tierBgReady, btnReady, xReady]).then(async ()=>{
+const fmtReady = Promise.all([bgReady, tierBgReady, btnReady, xReady, dBgReady]).then(async ()=>{
   let lock = null;
   try{
     if ((await idbGet(FMT_KEY)) === FMT_VER){ fmtOK = true; return; }
@@ -3225,6 +3429,12 @@ document.addEventListener("click", (ev)=>{
       xs.sel = el.getAttribute("data-date"); xRerenderKeep(); return;
     case "d-add": dOpenReg(null); return;
     case "d-open": { const e = dEntries.find((x)=>x.id===el.getAttribute("data-id")); if (e) dOpenReg(e); return; }
+    case "d-kind-sauna": case "d-kind-ev": {
+      const k = act==="d-kind-ev" ? "ev" : "sauna";
+      dCaptureDate(); dCaptureEv();
+      if (xs.dDraft.kind===k) return;
+      xs.dDraft.kind = k; xRerenderKeep(); return;
+    }
     case "d-cancel": dCancel(); return;
     case "d-submit": dSubmit(); return;
     case "d-delete": dRemove(); return;
@@ -3300,7 +3510,12 @@ document.addEventListener("input", (ev)=>{
   const id = ev.target.id;
   if (id==="x-sq") aSearch.q = ev.target.value;
   else if (id==="x-spq") xRefreshSaunaList();
-  else if (id==="x-date") dCaptureDate();
+  else if (id==="x-date" || id==="x-date2") dCaptureDate();
+  else if (id==="x-evt"){
+    dCaptureEv();
+    const b = document.querySelector(".x-reg-ok");
+    if (b) b.classList.toggle("off", !ev.target.value.trim());
+  }
   else if (id==="x-aname" && aDraft){
     aDraft.name = ev.target.value;
     const b = document.getElementById("x-asubmit");
@@ -3310,10 +3525,10 @@ document.addEventListener("input", (ev)=>{
 document.addEventListener("keydown", (ev)=>{
   if (ev.key!=="Enter") return;
   if (ev.target.id==="x-sq"){ ev.preventDefault(); aApplySearch(); }
-  if (ev.target.id==="x-spq"){ ev.preventDefault(); ev.target.blur(); }
+  if (ev.target.id==="x-spq" || ev.target.id==="x-evt"){ ev.preventDefault(); ev.target.blur(); }
 });
 document.addEventListener("change", async (ev)=>{
-  if (ev.target.id==="x-date"){ dCaptureDate(); return; }
+  if (ev.target.id==="x-date" || ev.target.id==="x-date2"){ dCaptureDate(); return; }
   if (ev.target.id==="x-sort"){ aSort = ev.target.value; xRerenderKeep(); return; }
   if (ev.target.id==="x-dyear"){ const v = ev.target.value; xs.dashYear = (v==="all" || v==="pre") ? v : Number(v); render(); window.scrollTo(0,0); return; }
   if (ev.target.id!=="x-aimg") return;
@@ -3358,7 +3573,7 @@ function dashRange(){
 }
 function dashEntries(){
   const [a,b] = dashRange();
-  return dEntries.filter((e)=>e.date>=a && e.date<=b);
+  return dEntries.filter((e)=>!dIsEvent(e) && e.date>=a && e.date<=b);   /* サウナ以外の予定は集計しない */
 }
 const dashPrefFromShort = (s)=>!s ? "" : (PREF_ORDER.find((p)=>p===s || shortPref(p)===s) || "");
 /* 施設ごとの回数（ARCHIVEにない記録は施設名ごとにまとめる） */
@@ -3466,7 +3681,10 @@ try{ localStorage.removeItem("sauna-award:jpmap:v1"); }catch(e){}
   try{
     if (indexedDB.databases){
       const dbs = await indexedDB.databases();
-      if (dbs.some((d)=>d.name==="sauna-award-dash-proto")) indexedDB.deleteDatabase("sauna-award-dash-proto");
+      /* dashboard.html / daialy-proto.html のプロトタイプ用データ（正式版のデータとは別の保存先）だけを削除 */
+      for (const n of ["sauna-award-dash-proto", "sauna-award-daialy-proto"]){
+        if (dbs.some((d)=>d.name===n)) indexedDB.deleteDatabase(n);
+      }
     }
   }catch(e){}
 })();
@@ -3503,6 +3721,62 @@ function dashYearBarsHTML(values, labels, curIdx){
     </div>`).join("");
   return `<div class="d2-yscroll no-swipe ${many?"many":""}" id="d2-yscroll"><div class="d2-ycols ${many?"":"few"}">${cols}</div></div>`;
 }
+/* ⑥ TIER・星の比率（円グラフ）: 選択中の期間のサ活（回数）を、施設の区分ごとに集計。
+   区分は TIER I → TIER II → TIER III → 星あり → 星なし の順に判定（1回のサ活は1つの区分に入る） */
+const DASH_PIE = [
+  { k:"t1", label:"TIER Ⅰ", color:"#E9CD76" },
+  { k:"t2", label:"TIER Ⅱ", color:"#C8CFDA" },
+  { k:"t3", label:"TIER Ⅲ", color:"#C48B5C" },
+  { k:"st", label:"星あり", color:"#63B4F0" },
+  { k:"no", label:"星なし", color:"#5A6672" }
+];
+function dashPieCounts(list){
+  const c = { t1:0, t2:0, t3:0, st:0, no:0 };
+  const memo = new Map();
+  for (const e of list){
+    const it = aOf(e.sid);
+    let k = "no";
+    if (it){
+      k = memo.get(it.id);
+      if (!k){
+        const ts = awardTiersOf(it.id);
+        k = ts.length ? "t" + Math.min(...ts.map((T)=>T.id)) : (it.star ? "st" : "no");
+        memo.set(it.id, k);
+      }
+    }
+    c[k]++;
+  }
+  return c;
+}
+function dashPieHTML(list){
+  const total = list.length;
+  if (!total) return `<p class="d2-maploading">この期間の記録はありません</p>`;
+  const c = dashPieCounts(list);
+  const R = 15.9155;   /* 円周がちょうど100になる半径 */
+  let acc = 0, arcs = "";
+  for (const p of DASH_PIE){
+    const v = c[p.k] / total * 100;
+    if (v > 0){
+      const gap = (v < 100 && v > 1.2) ? 0.6 : 0;
+      arcs += `<circle cx="21" cy="21" r="${R}" fill="none" stroke="${p.color}" stroke-width="6.4" stroke-dasharray="${(v-gap).toFixed(3)} ${(100-v+gap).toFixed(3)}" stroke-dashoffset="${(25-acc).toFixed(3)}"></circle>`;
+    }
+    acc += v;
+  }
+  const pct = (n)=>{ const v = n/total*100; return (v>0 && v<0.1) ? "0.1" : (Math.round(v*10)/10).toFixed(1); };
+  const rows = DASH_PIE.map((p)=>`
+    <li class="${c[p.k]?"":"zero"}"><i style="background:${p.color}"></i><span class="l">${p.label}</span><span class="c">${dashFmt(c[p.k])}回</span><span class="p">${pct(c[p.k])}%</span></li>`).join("");
+  return `
+  <div class="d2-pie">
+    <div class="d2-piechart">
+      <svg viewBox="0 0 42 42" role="img" aria-label="TIER・星の比率">
+        <circle cx="21" cy="21" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6.4"></circle>${arcs}
+      </svg>
+      <div class="d2-piemid"><b>${dashFmt(total)}</b><span>回</span></div>
+    </div>
+    <ul class="d2-pielegend">${rows}</ul>
+  </div>`;
+}
+
 /* ⑤ 棒グラフ */
 function dashBarsHTML(values, labels, curIdx){
   const max = Math.max(1, ...values);
@@ -3623,6 +3897,10 @@ function dashHTML(){
       <h2 class="d2-h">${chartTitle}</h2>
       <div class="d2-panel d2-chart">${chart}</div>
     </section>
+    <section class="d2-sec">
+      <h2 class="d2-h">TIER・星の比率</h2>
+      <div class="d2-panel">${dashPieHTML(list)}</div>
+    </section>
   </div>`;
 }
 
@@ -3676,11 +3954,20 @@ function render(){
   /* 背景画像: トップ/AWARD/設定画面のみに適用 */
   const bgEl = document.getElementById("bgimg");
   if (bgEl){
-    const showBg = appBg && (view==="home" || view==="tiers" || view==="settingsTiers");
-    if (showBg){
-      bgEl.style.backgroundImage = `url('${appBg}')`;
+    /* DAIALY（月表示・リスト表示）には「DAIALYの背景設定」の画像を表示 */
+    const bgUrl = (view==="daialy") ? dBgURL()
+      : (appBg && (view==="home" || view==="tiers" || view==="settingsTiers")) ? appBg : null;
+    bgEl.classList.toggle("dim", view==="daialy");
+    const hdrBg = view==="daialy" && !!bgUrl;
+    document.body.classList.toggle("dbg-on", hdrBg);
+    if (hdrBg){
+      if (bgEl.__dbg !== bgUrl){ document.documentElement.style.setProperty("--dbg", `url('${bgUrl}')`); bgEl.__dbg = bgUrl; }
+    } else if (bgEl.__dbg){ document.documentElement.style.removeProperty("--dbg"); bgEl.__dbg = null; }
+    if (bgUrl){
+      bgEl.style.backgroundImage = `url('${bgUrl}')`;
       bgEl.classList.add("on");
       root.style.background = "transparent";
+      if (typeof syncBgHeight==="function") syncBgHeight();
     } else {
       bgEl.classList.remove("on");
       bgEl.style.backgroundImage = "";
@@ -3701,7 +3988,19 @@ function render(){
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(tuneMarquees).catch(()=>{});
 }
 
+/* ヘッダーの背景を画面全体の背景とぴったり重ねるため、背景の高さを控えておく */
+function syncBgHeight(){
+  const el = document.getElementById("bgimg");
+  const h = (el && el.offsetHeight) || window.innerHeight;
+  if (h) document.documentElement.style.setProperty("--bgh", h + "px");
+}
+window.addEventListener("resize", syncBgHeight);
+/* フォントが後から届いたら、文字幅に合わせてティッカーの速度を整え直す */
+try{ if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", ()=>{ try{ tuneMarquees(); }catch(e){} }); }catch(e){}
+window.addEventListener("orientationchange", syncBgHeight);
+
 render();
+syncBgHeight();
 </script>
 </body>
 </html>
